@@ -1,0 +1,62 @@
+buatkan saya issue.md dengan list sebagai berikut:
+
+Tolong buatkan sebuah template Dashboard Admin modern dan production-ready (Mocked/Frontend-ready) dengan spesifikasi teknis dan fitur berikut:
+
+### 🛠️ Tech Stack & Library
+1. Framework: Next.js (App Router) atau Vite + React (TypeScript).
+2. State Management & Data Fetching: 
+   - @tanstack/react-query (untuk integrasi async state / API fetching siap pakai).
+   - @tanstack/react-table (untuk tabel interaktif: sorting, pagination, search).
+3. UI & Styling:
+   - Tailwind CSS.
+   - Shadcn UI / Radix UI (atau Lucide React icons).
+4. Forms & Validation:
+   - React Hook Form + Zod (schema validation).
+5. Charts:
+   - Recharts (Line, Bar, Donut/Pie chart).
+6. Feedback & Notifications:
+   - Sonner atau React Hot Toast (alert toast).
+   - Modal / Dialog & AlertDialog untuk konfirmasi delete.
+
+---
+
+### 📂 Struktur Halaman & Fitur yang Wajib Ada
+
+1. **Authentication:**
+   - Halaman **Login** (Form email & password, remember me, validation error UI, submit simulation).
+   - Halaman **Register** (Form nama, email, password, konfirmasi password, terms checkbox).
+
+2. **Layout Dashboard:**
+   - **Sidebar Responsif:** Menu berjenjang/collapsible, navigasi aktif, profile singkat di footer sidebar, toggle collapse (desktop & mobile sheet).
+   - **Header / Top Navbar:** Breadcrumbs, Search global bar, Theme Toggle (Dark/Light mode ready), Notification badge dropdown, User Avatar dropdown (Profile, Settings, Logout).
+
+3. **Halaman Dashboard Utama (Overview):**
+   - KPI/Metric Summary Cards (contoh: Total Revenue, Active Users, Sales, Conversion Rate dengan indikator naik/turun % + icon).
+   - Area/Line Chart (Trend Analitik mingguan/bulanan).
+   - Bar Chart (Perbandingan data).
+   - Mini Table / Activity Feed (Aktivitas terbaru).
+
+4. **Halaman CRUD Lengkap (Data Management / Table View):**
+   - Menggunakan `@tanstack/react-table`.
+   - Fitur: Search input, Filter dropdown, Column visibility toggle, Pagination control (Page size, Next/Prev), Sorting per kolom.
+   - **Tombol Action:**
+     - *Add New:* Membuka Sheet/Modal Form input.
+     - *Edit:* Membuka Form dengan data pre-filled.
+     - *Delete:* Membuka Alert Dialog konfirmasi hapus ("Are you sure?").
+
+5. **Halaman Form & Input Showcase:**
+   - Berbagai variasi input: Text input, Number, Textarea, Select / Combobox (Searchable Select), Date Picker, File Upload zone / Dropzone, Checkbox, Radio Group, Switch / Toggle.
+   - Dilengkapi validasi Zod + pesan error di bawah tiap field.
+
+---
+
+### ⚙️ Ketentuan Arsitektur & Mock Data (Ready for API):
+- Buat folder terstruktur:
+  - `/components/ui` (Komponen reusable)
+  - `/features` atau `/modules` (Data fetching hooks, komponen per modul)
+  - `/lib` (QueryClient, mock data, axios/fetch client placeholder)
+  - `/types` (TypeScript interface untuk user, tabel item, form payload)
+- Siapkan custom hooks menggunakan `@tanstack/react-query` (contoh: `useGetUsers`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) dengan mock data `Promise` / `setTimeout` sehingga nanti saya tinggal mengganti endpoint URL fetch-nya saja.
+- Tampilkan feedback toast alert (Success / Error) saat trigger simulasi Add, Edit, dan Delete.
+
+Berikan struktur folder, file konfigurasi, dan kode lengkap untuk semua halaman dan komponen tersebut.
