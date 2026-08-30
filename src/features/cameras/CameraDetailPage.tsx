@@ -363,6 +363,18 @@ export function CameraDetailPage() {
 
                 <div className="flex items-center justify-between pt-3">
                   <span className="text-muted-foreground flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Koordinat GPS
+                  </span>
+                  <span className="font-mono font-medium text-foreground">
+                    {camera.latitude != null && camera.longitude != null
+                      ? `${Number(camera.latitude).toFixed(4)}, ${Number(camera.longitude).toFixed(4)}`
+                      : '- Belum diset -'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-3">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
                     Status Sinyal
                   </span>

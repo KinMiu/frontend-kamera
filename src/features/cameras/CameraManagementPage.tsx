@@ -33,6 +33,7 @@ import {
   Calendar,
   Layers,
   Radio,
+  MapPin,
 } from 'lucide-react';
 import {
   Table,
@@ -250,6 +251,22 @@ export function CameraManagementPage() {
                 {isCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
               </Button>
             </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'latitude',
+        header: 'Koordinat GPS',
+        cell: ({ row }) => {
+          const cam = row.original;
+          const hasCoords = cam.latitude != null && cam.longitude != null;
+          return hasCoords ? (
+            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border w-fit">
+              <MapPin className="h-3 w-3 text-primary shrink-0" />
+              <span>{Number(cam.latitude).toFixed(4)}, {Number(cam.longitude).toFixed(4)}</span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-muted-foreground/60 italic">- Belum diset -</span>
           );
         },
       },

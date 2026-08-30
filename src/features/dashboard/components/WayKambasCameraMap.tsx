@@ -35,10 +35,26 @@ export const WAY_KAMBAS_LOCATIONS: Record<string, { lat: number; lng: number; se
 };
 
 export function getCoordinatesForCamera(camera: Camera, index = 0): { lat: number; lng: number; sector: string } {
+  // If camera has saved coordinates from database, use them directly
+  if (
+    camera.latitude != null &&
+    camera.longitude != null &&
+    !isNaN(Number(camera.latitude)) &&
+    !isNaN(Number(camera.longitude))
+  ) {
+    const lat = Number(camera.latitude);
+    const lng = Number(camera.longitude);
+    return {
+      lat,
+      lng,
+      sector: `Koordinat GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+    };
+  }
+
   if (WAY_KAMBAS_LOCATIONS[camera.id]) {
     return WAY_KAMBAS_LOCATIONS[camera.id];
   }
-  // Generate deterministic offset around Way Kambas center for newly added cameras
+  // Generate deterministic offset around Way Kambas center for cameras without saved coordinates
   const hash = (camera.id + camera.name).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const latOffset = ((hash % 100) / 500) - 0.1;
   const lngOffset = (((hash * 13) % 100) / 450) - 0.1;
@@ -348,6 +364,16 @@ export function WayKambasCameraMap() {
 
             <div className="rounded-lg bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground border truncate">
               <span className="text-primary">URI:</span> {selectedCamera.rtspEndpoint}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground bg-background/50 px-2 py-1 rounded-md border">
+              <span className="flex items-center gap-1 font-sans">
+                <MapPin className="h-3 w-3 text-primary" />
+                {getCoordinatesForCamera(selectedCamera).sector}
+              </span>
+              <span className="font-mono text-[10px]">
+                {getCoordinatesForCamera(selectedCamera).lat.toFixed(4)}, {getCoordinatesForCamera(selectedCamera).lng.toFixed(4)}
+              </span>
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">

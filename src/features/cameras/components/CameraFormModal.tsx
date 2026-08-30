@@ -14,7 +14,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, CameraFormData } from '@/types';
 import { useCreateCamera, useUpdateCamera } from '@/features/cameras/hooks/use-cameras';
-import { Camera as CameraIcon, Network, Video, Loader2 } from 'lucide-react';
+import { Camera as CameraIcon, Network, Video, Loader2, MapPin, Sparkles } from 'lucide-react';
+
+const PRESET_LOCATIONS = [
+  { name: 'Pos Plang Ijo', lat: -5.0456, lng: 105.7890 },
+  { name: 'Pusat Latihan Gajah (PLG)', lat: -4.9250, lng: 105.7830 },
+  { name: 'Pos Way Kanan', lat: -5.0120, lng: 105.8150 },
+  { name: 'Pos Rawa Bunder', lat: -4.9850, lng: 105.7500 },
+  { name: 'Kuala Kambas', lat: -4.9200, lng: 105.8850 },
+];
 
 const cameraSchema = z.object({
   name: z
@@ -34,6 +42,20 @@ const cameraSchema = z.object({
     .refine(
       (val) => val.startsWith('rtsp://') || val.startsWith('http://') || val.startsWith('https://'),
       'RTSP Endpoint harus diawali dengan rtsp://, http://, atau https://'
+    ),
+  latitude: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (!isNaN(Number(val)) && Number(val) >= -90 && Number(val) <= 90),
+      'Latitude harus berupa angka antara -90 dan 90'
+    ),
+  longitude: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (!isNaN(Number(val)) && Number(val) >= -180 && Number(val) <= 180),
+      'Longitude harus berupa angka antara -180 dan 180'
     ),
 });
 
@@ -64,6 +86,8 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
       name: '',
       macAddress: '',
       rtspEndpoint: '',
+      latitude: '',
+      longitude: '',
     },
   });
 
@@ -73,21 +97,35 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
         setValue('name', camera.name);
         setValue('macAddress', camera.macAddress);
         setValue('rtspEndpoint', camera.rtspEndpoint);
+        setValue('latitude', camera.latitude != null ? String(camera.latitude) : '');
+        setValue('longitude', camera.longitude != null ? String(camera.longitude) : '');
       } else {
         reset({
           name: '',
           macAddress: '',
           rtspEndpoint: '',
+          latitude: '',
+          longitude: '',
         });
       }
     }
   }, [open, camera, setValue, reset]);
 
+  const applyPreset = (preset: typeof PRESET_LOCATIONS[0]) => {
+    setValue('latitude', String(preset.lat), { shouldValidate: true });
+    setValue('longitude', String(preset.lng), { shouldValidate: true });
+  };
+
   const onSubmit = async (values: CameraFormValues) => {
+    const parsedLat = values.latitude && values.latitude.trim() !== '' ? Number(values.latitude) : null;
+    const parsedLong = values.longitude && values.longitude.trim() !== '' ? Number(values.longitude) : null;
+
     const payload: CameraFormData = {
       name: values.name,
       macAddress: values.macAddress,
       rtspEndpoint: values.rtspEndpoint,
+      latitude: parsedLat,
+      longitude: parsedLong,
     };
 
     if (isEditing && camera) {
@@ -112,7 +150,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
               </DialogTitle>
               <DialogDescription className="text-xs">
                 {isEditing
-                  ? 'Perbarui informasi endpoint RTSP dan nama perangkat kamera.'
+                  ? 'Perbarui informasi endpoint RTSP, nama, dan titik koordinat kamera.'
                   : 'Daftarkan perangkat kamera pengawasan baru ke dalam sistem.'}
               </DialogDescription>
             </div>
@@ -174,6 +212,70 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
             <p className="text-[11px] text-muted-foreground">
               Format umum: <code className="text-primary">rtsp://[ip-address]:554/[channel]</code>
             </p>
+          </div>
+
+          {/* GPS Coordinates (Latitude & Longitude) */}
+          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Titik Koordinat GPS (Way Kambas)
+              </span>
+              <span className="text-[10px] text-muted-foreground">Opsional</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">
+                  Latitude (Lintang)
+                </label>
+                <Input
+                  {...register('latitude')}
+                  placeholder="-5.0456"
+                  className="h-9 font-mono text-xs bg-background"
+                  disabled={isSubmitting}
+                />
+                {errors.latitude && (
+                  <p className="text-[10px] text-destructive">{errors.latitude.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">
+                  Longitude (Bujur)
+                </label>
+                <Input
+                  {...register('longitude')}
+                  placeholder="105.7890"
+                  className="h-9 font-mono text-xs bg-background"
+                  disabled={isSubmitting}
+                />
+                {errors.longitude && (
+                  <p className="text-[10px] text-destructive">{errors.longitude.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Preset Coordinates */}
+            <div className="pt-1">
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-1.5">
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                Pilih Preset Lokasi Cepat:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_LOCATIONS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    disabled={isSubmitting}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-background border hover:border-primary hover:text-primary transition-colors"
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="pt-3 gap-2 sm:gap-0">
