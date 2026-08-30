@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Users,
+  Camera,
+  AlertCircle,
   FileCode2,
   Lock,
   UserPlus,
@@ -12,6 +13,7 @@ import {
   Sparkles,
   Layers,
   ChevronDown,
+  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +25,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { env } from '@/config/env';
+import { authApi } from '@/features/auth/api/auth-api';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -42,6 +45,15 @@ export function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(authApi.getStoredUser());
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setCurrentUser(authApi.getStoredUser());
+    };
+    window.addEventListener('auth_state_change', handleAuthChange);
+    return () => window.removeEventListener('auth_state_change', handleAuthChange);
+  }, []);
 
   const handleNavClick = () => {
     if (isMobile && onMobileClose) {
@@ -62,19 +74,25 @@ export function Sidebar({
       ],
     },
     {
-      title: 'Management',
+      title: 'Kamera & Tracking',
       items: [
         {
-          name: 'Users (CRUD)',
-          path: '/users',
-          icon: Users,
-          badge: '12',
+          name: 'Manajemen Kamera',
+          path: '/cameras',
+          icon: Camera,
+          badge: '8',
+        },
+        {
+          name: 'GitHub Issues',
+          path: '/issues',
+          icon: AlertCircle,
+          badge: 'Active',
         },
         {
           name: 'Form Showcase',
           path: '/forms',
           icon: FileCode2,
-          badge: 'New',
+          badge: 'Demo',
         },
       ],
     },
@@ -116,16 +134,16 @@ export function Sidebar({
             )}
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-              <Layers className="h-5 w-5" />
+              <Video className="h-5 w-5" />
             </div>
             {(!collapsed || isMobile) && (
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 font-bold text-base tracking-tight text-foreground truncate">
-                  <span>{env.appTitle}</span>
+                <div className="flex items-center gap-1.5 font-bold text-sm tracking-tight text-foreground truncate">
+                  <span>Kamera Way Kambas</span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                   <Sparkles className="h-3 w-3 text-amber-500" />
-                  <span>v{env.appVersion} • Pro</span>
+                  <span>v{env.appVersion} • Surveillance</span>
                 </div>
               </div>
             )}
@@ -160,7 +178,10 @@ export function Sidebar({
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
+                  const isActive =
+                    item.path === '/'
+                      ? location.pathname === '/'
+                      : location.pathname.startsWith(item.path);
 
                   const navLinkContent = (
                     <NavLink
@@ -290,17 +311,19 @@ export function Sidebar({
             <Avatar className="h-9 w-9 shrink-0 border border-primary/20">
               <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" />
               <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                AD
+                {currentUser?.name
+                  ? currentUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                  : 'US'}
               </AvatarFallback>
             </Avatar>
 
             {(!collapsed || isMobile) && (
               <div className="flex-1 overflow-hidden">
                 <p className="text-xs font-semibold text-foreground truncate">
-                  Kin Miu
+                  {currentUser?.name || 'Pengguna'}
                 </p>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  admin@kinmiu.dev
+                  {currentUser?.email || 'admin@destroyer.local'}
                 </p>
               </div>
             )}
@@ -309,7 +332,10 @@ export function Sidebar({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/login')}
+                onClick={async () => {
+                  await authApi.logout();
+                  navigate('/login');
+                }}
                 className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 title="Log out"
               >

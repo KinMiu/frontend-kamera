@@ -4,21 +4,21 @@
  */
 export const env = {
   /** Application display title */
-  appTitle: import.meta.env.VITE_APP_TITLE || 'Nexus Admin',
+  appTitle: import.meta.env.VITE_APP_TITLE || 'Kamera Way Kambas',
 
   /** Application description */
   appDescription:
     import.meta.env.VITE_APP_DESCRIPTION ||
-    'Modern & Production-Ready Admin Dashboard Template',
+    'Sistem Pengawasan Kamera & Pemantauan Satwa TNWK',
 
   /** Application release version */
   appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
 
   /** Base URL for API requests */
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
 
   /** Whether the app should use mock data or real backend APIs */
-  enableMock: import.meta.env.VITE_ENABLE_MOCK !== 'false',
+  enableMock: import.meta.env.VITE_ENABLE_MOCK === 'true',
 
   /** Current deployment environment name */
   appEnv:

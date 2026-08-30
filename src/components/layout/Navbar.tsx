@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
@@ -18,7 +18,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
-import { env } from '@/config/env';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +41,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { mockNotifications } from '@/lib/mock-data';
 import { NotificationItem } from '@/types';
+import { authApi } from '@/features/auth/api/auth-api';
 import { toast } from 'sonner';
 
 interface NavbarProps {
@@ -53,12 +53,21 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  const [currentUser, setCurrentUser] = useState(authApi.getStoredUser());
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setCurrentUser(authApi.getStoredUser());
+    };
+    window.addEventListener('auth_state_change', handleAuthChange);
+    return () => window.removeEventListener('auth_state_change', handleAuthChange);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    toast.success('All notifications marked as read');
+    toast.success('Semua notifikasi telah ditandai dibaca');
   };
 
   const markSingleAsRead = (id: string) => {
@@ -71,8 +80,10 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
     switch (path) {
       case '/':
         return 'Overview';
-      case '/users':
-        return 'User Management';
+      case '/cameras':
+        return 'Manajemen Kamera';
+      case '/issues':
+        return 'GitHub Issues';
       case '/forms':
         return 'Form Showcase';
       case '/login':
@@ -116,24 +127,24 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
                 <Link to="/" className="text-muted-foreground hover:text-foreground font-medium">
-                  {env.appTitle}
+                  Kamera Way Kambas
                 </Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
-            {location.pathname.startsWith('/users/') && location.pathname !== '/users' ? (
+            {location.pathname.startsWith('/cameras/') && location.pathname !== '/cameras' ? (
               <>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link to="/users" className="text-muted-foreground hover:text-foreground font-medium">
-                      User Management
+                    <Link to="/cameras" className="text-muted-foreground hover:text-foreground font-medium">
+                      Manajemen Kamera
                     </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground">
-                    User Details
+                    Detail Stream Kamera
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </>
@@ -158,7 +169,7 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
         >
           <div className="flex items-center gap-2 truncate">
             <Search className="h-3.5 w-3.5 shrink-0 group-hover:text-primary transition-colors" />
-            <span className="truncate">Search anything...</span>
+            <span className="truncate">Cari kamera / issue...</span>
           </div>
           <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
             <span className="text-xs">⌘</span>K
@@ -188,10 +199,10 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
           <PopoverContent align="end" className="w-80 sm:w-96 p-0 shadow-2xl">
             <div className="flex items-center justify-between border-b p-4 pb-3">
               <div className="flex items-center gap-2">
-                <h4 className="font-semibold text-sm">Notifications</h4>
+                <h4 className="font-semibold text-sm">Notifikasi</h4>
                 {unreadCount > 0 && (
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                    {unreadCount} new
+                    {unreadCount} baru
                   </span>
                 )}
               </div>
@@ -202,7 +213,7 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
                   className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
-                  Mark all read
+                  Tandai semua dibaca
                 </button>
               )}
             </div>
@@ -244,9 +255,9 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
                 variant="ghost"
                 size="sm"
                 className="w-full text-xs text-muted-foreground hover:text-foreground h-8"
-                onClick={() => toast.info('All notifications are up to date')}
+                onClick={() => toast.info('Semua notifikasi terupdate')}
               >
-                View notification history
+                Tutup riwayat notifikasi
               </Button>
             </div>
           </PopoverContent>
@@ -262,7 +273,9 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
               <Avatar className="h-9 w-9">
                 <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" />
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                  KM
+                  {currentUser?.name
+                    ? currentUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                    : 'US'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -272,51 +285,48 @@ export function Navbar({ onOpenMobileMenu, onOpenSearch }: NavbarProps) {
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-semibold leading-none text-foreground">
-                    Kin Miu
+                    {currentUser?.name || 'Pengguna'}
                   </p>
                   <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                    PRO
+                    ADMIN
                   </span>
                 </div>
-                <p className="text-xs leading-none text-muted-foreground">
-                  admin@kinmiu.dev
+                <p className="text-xs leading-none text-muted-foreground truncate">
+                  {currentUser?.email || 'admin@destroyer.local'}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => toast.info('Profile modal placeholder')}
+              onClick={() => toast.info('Profil Pengguna Aktif')}
               className="cursor-pointer"
             >
               <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>My Profile</span>
+              <span>Profil Saya</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => toast.info('Settings modal placeholder')}
+              onClick={() => navigate('/cameras')}
               className="cursor-pointer"
             >
               <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>Workspace Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => toast.info('Pro features are active!')}
-              className="cursor-pointer"
-            >
-              <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
-              <span>Upgrade Plan</span>
+              <span>Pengaturan Kamera</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
-                window.open('https://github.com/Ma-Vibe-Code/dashboard-template', '_blank')
+                window.open('https://github.com/KinMiu/frontend-kamera', '_blank')
               }
               className="cursor-pointer"
             >
               <HelpCircle className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>Documentation</span>
+              <span>GitHub Repositori</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => navigate('/login')}
+              onClick={async () => {
+                await authApi.logout();
+                toast.success('Berhasil logout');
+                navigate('/login');
+              }}
               className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />

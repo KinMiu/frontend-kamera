@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -6,13 +6,15 @@ import {
 } from '@/components/ui/dialog';
 import {
   LayoutDashboard,
-  Users,
+  Camera,
+  AlertCircle,
   FileCode2,
   Lock,
   UserPlus,
   Moon,
   Sun,
   Search,
+  ExternalLink,
 } from 'lucide-react';
 import { useTheme } from '@/components/theme/theme-provider';
 
@@ -47,63 +49,70 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navItems = [
     {
       title: 'Overview Dashboard',
-      description: 'View KPIs, analytics charts, and recent activity',
+      description: 'Pantau metrik kamera, stream, dan aktivitas',
       icon: LayoutDashboard,
       action: () => navigate('/'),
       category: 'Navigation',
     },
     {
-      title: 'User Management (CRUD)',
-      description: 'Browse, filter, add, edit, and delete users',
-      icon: Users,
-      action: () => navigate('/users'),
+      title: 'Manajemen Kamera (CRUD)',
+      description: 'Kelola data kamera pemantauan dan RTSP stream',
+      icon: Camera,
+      action: () => navigate('/cameras'),
       category: 'Navigation',
     },
     {
+      title: 'GitHub Issues Tracker',
+      description: 'Lihat dan laporkan tiket kendala di repositori GitHub',
+      icon: AlertCircle,
+      action: () => navigate('/issues'),
+      category: 'Issues',
+    },
+    {
       title: 'Form & Input Showcase',
-      description: 'Explore all UI input variants with Zod validation',
+      description: 'Eksplorasi variasi komponen form dengan validasi Zod',
       icon: FileCode2,
       action: () => navigate('/forms'),
       category: 'Navigation',
     },
     {
-      title: 'Login Page',
-      description: 'View the authentication login screen',
+      title: 'Halaman Login',
+      description: 'Akses halaman autentikasi masuk akun',
       icon: Lock,
       action: () => navigate('/login'),
       category: 'Auth',
     },
     {
-      title: 'Register Page',
-      description: 'View the authentication register screen',
+      title: 'Halaman Register',
+      description: 'Akses halaman pendaftaran akun baru',
       icon: UserPlus,
       action: () => navigate('/register'),
       category: 'Auth',
     },
     {
-      title: 'Sarah Jenkins (Admin Profile)',
-      description: 'View full profile, security, and activity details',
-      icon: Users,
-      action: () => navigate('/users/usr-1'),
-      category: 'Users',
+      title: 'Kamera Pos Way Kanan 01 (Detail Stream)',
+      description: 'Buka live preview stream RTSP Kamera Way Kanan 01',
+      icon: Camera,
+      action: () => navigate('/cameras/cam-wk-001'),
+      category: 'Kamera',
     },
     {
-      title: 'Alex Rivera (Editor Profile)',
-      description: 'View full profile, security, and activity details',
-      icon: Users,
-      action: () => navigate('/users/usr-2'),
-      category: 'Users',
+      title: 'Buka GitHub Repository',
+      description: 'Buka github.com/KinMiu/frontend-kamera di tab baru',
+      icon: ExternalLink,
+      action: () => window.open('https://github.com/KinMiu/frontend-kamera', '_blank'),
+      category: 'External',
     },
     {
-      title: 'Switch to Dark Mode',
-      description: 'Set application theme to dark',
+      title: 'Aktifkan Dark Mode',
+      description: 'Ubah tema aplikasi menjadi gelap',
       icon: Moon,
       action: () => setTheme('dark'),
       category: 'Theme',
     },
     {
-      title: 'Switch to Light Mode',
-      description: 'Set application theme to light',
+      title: 'Aktifkan Light Mode',
+      description: 'Ubah tema aplikasi menjadi terang',
       icon: Sun,
       action: () => setTheme('light'),
       category: 'Theme',
@@ -124,7 +133,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <Search className="mr-2.5 h-5 w-5 shrink-0 text-muted-foreground" />
           <input
             className="flex h-10 w-full rounded-md bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
-            placeholder="Type a command, page name, or theme action..."
+            placeholder="Ketik nama halaman, kamera, issue, atau aksi tema..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
@@ -137,7 +146,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <div className="max-h-80 overflow-y-auto p-2">
           {filteredItems.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              No results found for &ldquo;{search}&rdquo;.
+              Tidak ada hasil untuk &ldquo;{search}&rdquo;.
             </div>
           ) : (
             <div className="space-y-1">
@@ -169,8 +178,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </div>
 
         <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-          <span>Navigate with mouse or arrow keys</span>
-          <span>Press Enter to select</span>
+          <span>Navigasi dengan mouse atau tombol panah</span>
+          <span>Tekan Enter untuk memilih</span>
         </div>
       </DialogContent>
     </Dialog>

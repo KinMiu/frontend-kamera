@@ -1,4 +1,7 @@
-export type UserRole = 'Admin' | 'Editor' | 'Viewer' | 'Manager';
+// =============================================================================
+// Authentication & User Types (Preserved for Auth System)
+// =============================================================================
+export type UserRole = 'Admin' | 'Operator' | 'Viewer' | 'Technician';
 export type UserStatus = 'Active' | 'Inactive' | 'Pending';
 
 export interface UserSecuritySession {
@@ -17,7 +20,7 @@ export interface UserActivityLog {
   description: string;
   timestamp: string;
   ipAddress?: string;
-  type: 'security' | 'auth' | 'edit' | 'billing' | 'system';
+  type: 'security' | 'auth' | 'edit' | 'camera' | 'system';
 }
 
 export interface User {
@@ -30,37 +33,98 @@ export interface User {
   department: string;
   createdAt: string;
   lastActive: string;
-
-  // Extended Profile & Contact Information
   phone?: string;
   location?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  latitude?: number;
-  longitude?: number;
   bio?: string;
-  jobTitle?: string;
-  employmentType?: 'Full-time' | 'Contract' | 'Part-time';
-  twoFactorEnabled?: boolean;
-  sessions?: UserSecuritySession[];
-  activities?: UserActivityLog[];
 }
 
-export interface UserFormData {
+// =============================================================================
+// Camera / Device Types (Aligned with Prisma Device Schema)
+// =============================================================================
+export interface Camera {
+  id: string;
   name: string;
-  email: string;
-  role: UserRole;
-  status: UserStatus;
-  department: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  latitude?: number;
-  longitude?: number;
+  macAddress: string;
+  rtspEndpoint: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
 }
 
+export interface CameraFormData {
+  name: string;
+  macAddress: string;
+  rtspEndpoint: string;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+// =============================================================================
+// GitHub Issues Types
+// =============================================================================
+export interface GitHubUser {
+  login: string;
+  id: number;
+  avatar_url: string;
+  html_url: string;
+}
+
+export interface GitHubLabel {
+  id: number;
+  name: string;
+  color: string;
+  description?: string;
+}
+
+export interface GitHubMilestone {
+  id: number;
+  number: number;
+  title: string;
+  description: string;
+  state: 'open' | 'closed';
+  due_on?: string;
+}
+
+export interface GitHubIssue {
+  id: number;
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  locked: boolean;
+  user: GitHubUser;
+  labels: GitHubLabel[];
+  body: string | null;
+  comments: number;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  html_url: string;
+  author_association?: string;
+  assignees?: GitHubUser[];
+  milestone?: GitHubMilestone | null;
+}
+
+export interface GitHubIssueComment {
+  id: number;
+  user: GitHubUser;
+  created_at: string;
+  updated_at: string;
+  body: string;
+  html_url: string;
+}
+
+export interface CreateGitHubIssuePayload {
+  title: string;
+  body: string;
+  labels?: string[];
+  assignees?: string[];
+}
+
+// =============================================================================
+// Dashboard & Metric Types
+// =============================================================================
 export interface MetricCardData {
   id: string;
   title: string;
@@ -74,18 +138,12 @@ export interface MetricCardData {
 
 export interface RevenueChartData {
   name: string;
-  revenue: number;
-  expenses: number;
-  profit: number;
+  activeStreams: number;
+  captures: number;
+  detections: number;
 }
 
-export interface SalesCategoryData {
-  name: string;
-  sales: number;
-  target: number;
-}
-
-export interface DeviceDistributionData {
+export interface CameraStatusDistribution {
   name: string;
   value: number;
   color: string;
@@ -111,12 +169,13 @@ export interface NotificationItem {
   type: 'order' | 'user' | 'system' | 'alert';
 }
 
+// =============================================================================
+// Pagination & Table Generic Types
+// =============================================================================
 export interface PaginationParams {
   page: number;
   pageSize: number;
   search?: string;
-  role?: string;
-  status?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

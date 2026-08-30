@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
-  DollarSign,
-  Users,
-  CreditCard,
+  Camera as CameraIcon,
+  Video,
+  AlertCircle,
+  Activity,
   TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  Download,
-  Calendar,
-  Sparkles,
   RefreshCw,
+  Plus,
+  ArrowRight,
+  Radio,
+  Network,
+  ExternalLink,
 } from 'lucide-react';
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -24,7 +24,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import {
   Card,
@@ -38,46 +37,44 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   metricCardsData,
-  monthlyRevenueData,
-  weeklyRevenueData,
-  salesCategoryData,
-  deviceDistributionData,
+  monthlyActivityData,
+  cameraStatusDistributionData,
   recentActivities,
 } from '@/lib/mock-data';
-import { formatCurrency } from '@/lib/utils';
-import { GlobalUserMap } from '@/features/dashboard/components/GlobalUserMap';
+import { useGetCameras } from '@/features/cameras/hooks/use-cameras';
+import { useGetGitHubIssues } from '@/features/issues/hooks/use-github-issues';
+import { WayKambasCameraMap } from '@/features/dashboard/components/WayKambasCameraMap';
 import { toast } from 'sonner';
 
 export function OverviewPage() {
-  const [timeRange, setTimeRange] = useState<'monthly' | 'weekly'>('monthly');
+  const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const revenueData = timeRange === 'monthly' ? monthlyRevenueData : weeklyRevenueData;
+  const { data: camerasResponse, refetch: refetchCameras } = useGetCameras({ page: 1, pageSize: 5 });
+  const { data: issuesData, refetch: refetchIssues } = useGetGitHubIssues({ state: 'open' });
 
-  const handleRefresh = () => {
+  const cameras = camerasResponse?.data || [];
+  const openIssues = issuesData?.issues || [];
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('Dashboard metrics refreshed');
-    }, 600);
-  };
-
-  const handleExport = () => {
-    toast.success('Analytics report exported as CSV');
+    await Promise.all([refetchCameras(), refetchIssues()]);
+    setIsRefreshing(false);
+    toast.success('Dashboard metrics refreshed');
   };
 
   const getMetricIcon = (iconName: string) => {
     switch (iconName) {
-      case 'DollarSign':
-        return <DollarSign className="h-5 w-5 text-blue-500" />;
-      case 'Users':
-        return <Users className="h-5 w-5 text-indigo-500" />;
-      case 'CreditCard':
-        return <CreditCard className="h-5 w-5 text-violet-500" />;
-      case 'TrendingUp':
-        return <TrendingUp className="h-5 w-5 text-emerald-500" />;
+      case 'Camera':
+        return <CameraIcon className="h-5 w-5 text-blue-500" />;
+      case 'Video':
+        return <Video className="h-5 w-5 text-emerald-500" />;
+      case 'AlertCircle':
+        return <AlertCircle className="h-5 w-5 text-amber-500" />;
+      case 'Activity':
+        return <Activity className="h-5 w-5 text-purple-500" />;
       default:
-        return <DollarSign className="h-5 w-5 text-primary" />;
+        return <CameraIcon className="h-5 w-5 text-primary" />;
     }
   };
 
@@ -86,17 +83,17 @@ export function OverviewPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Dashboard Overview
+              Dashboard Kamera Way Kambas
             </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live System
+              Sistem Aktif
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Welcome back, here is what&apos;s happening with your business today.
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Pemantauan perangkat kamera pengawasan dan pelacakan issue pengembangan sistem.
           </p>
         </div>
 
@@ -109,20 +106,18 @@ export function OverviewPage() {
             disabled={isRefreshing}
             className="h-9 gap-1.5 text-xs font-medium"
           >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
-            />
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </Button>
 
           <Button
             variant="default"
             size="sm"
-            onClick={handleExport}
+            onClick={() => navigate('/cameras')}
             className="h-9 gap-1.5 text-xs font-medium"
           >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export Report</span>
+            <Plus className="h-3.5 w-3.5" />
+            <span>Kelola Kamera</span>
           </Button>
         </div>
       </div>
@@ -147,18 +142,8 @@ export function OverviewPage() {
                 {metric.value}
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <span
-                  className={`inline-flex items-center gap-0.5 font-semibold ${
-                    metric.isPositive
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-rose-600 dark:text-rose-400'
-                  }`}
-                >
-                  {metric.isPositive ? (
-                    <TrendingUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <TrendingDown className="h-3.5 w-3.5" />
-                  )}
+                <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
                   {metric.change}
                 </span>
                 <span className="text-muted-foreground">{metric.period}</span>
@@ -168,63 +153,37 @@ export function OverviewPage() {
         ))}
       </div>
 
-      {/* Main Charts Section */}
+      {/* Main Charts & Quick Overview Section */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Area / Line Chart: Revenue Analytics (2 cols) */}
+        {/* Area Chart: RTSP Activity Stream (2 cols) */}
         <Card className="lg:col-span-2 border-border/80 bg-card shadow-xs">
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
             <div className="space-y-1">
               <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                Revenue & Profit Stream
+                Aktivitas Stream & Snapshot Kamera
                 <Badge variant="outline" className="text-[10px] font-normal py-0">
                   Realtime
                 </Badge>
               </CardTitle>
               <CardDescription>
-                Gross revenue versus operational expenditures and net profit.
+                Trafik tangkapan gambar dan aktivitas RTSP stream mingguan.
               </CardDescription>
-            </div>
-
-            {/* Timeframe switch */}
-            <div className="flex items-center rounded-lg border bg-muted/50 p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setTimeRange('monthly')}
-                className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                  timeRange === 'monthly'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setTimeRange('weekly')}
-                className={`rounded-md px-3 py-1 font-medium transition-colors ${
-                  timeRange === 'weekly'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Weekly
-              </button>
             </div>
           </CardHeader>
 
           <CardContent className="pt-2">
-            <div className="h-[320px] w-full">
+            <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={revenueData}
+                  data={monthlyActivityData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 >
                   <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorCaptures" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                     </linearGradient>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorDetections" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                     </linearGradient>
@@ -240,7 +199,6 @@ export function OverviewPage() {
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 12, fill: '#888888' }}
-                    tickFormatter={(val) => `$${val / 1000}k`}
                   />
                   <Tooltip
                     content={({ active, payload, label }) => {
@@ -264,7 +222,7 @@ export function OverviewPage() {
                                   {entry.name}:
                                 </span>
                                 <span className="font-bold text-foreground">
-                                  {formatCurrency(Number(entry.value))}
+                                  {entry.value} event
                                 </span>
                               </div>
                             ))}
@@ -276,21 +234,21 @@ export function OverviewPage() {
                   />
                   <Area
                     type="monotone"
-                    dataKey="revenue"
-                    name="Revenue"
+                    dataKey="captures"
+                    name="Snapshot Frame"
                     stroke="#3b82f6"
                     strokeWidth={2.5}
                     fillOpacity={1}
-                    fill="url(#colorRevenue)"
+                    fill="url(#colorCaptures)"
                   />
                   <Area
                     type="monotone"
-                    dataKey="profit"
-                    name="Net Profit"
+                    dataKey="detections"
+                    name="Deteksi Objek"
                     stroke="#10b981"
                     strokeWidth={2}
                     fillOpacity={1}
-                    fill="url(#colorProfit)"
+                    fill="url(#colorDetections)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -300,77 +258,64 @@ export function OverviewPage() {
             <div className="mt-4 flex items-center justify-center gap-6 text-xs text-muted-foreground border-t border-border/60 pt-3">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                <span className="font-medium">Gross Revenue</span>
+                <span className="font-medium">Snapshot Frame</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="font-medium">Net Profit</span>
+                <span className="font-medium">Deteksi Objek</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Donut Chart: Device & Traffic Distribution (1 col) */}
+        {/* Donut Chart: Camera Status Distribution (1 col) */}
         <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between">
           <CardHeader className="pb-2">
             <CardTitle className="text-base sm:text-lg font-bold">
-              Traffic Distribution
+              Distribusi Status Kamera
             </CardTitle>
-            <CardDescription>Audience breakdown by device category.</CardDescription>
+            <CardDescription>Kondisi operasional kamera pengawasan.</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col justify-center items-center pt-0">
-            <div className="h-[220px] w-full relative flex items-center justify-center">
+            <div className="h-[200px] w-full relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={deviceDistributionData}
+                    data={cameraStatusDistributionData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={85}
+                    innerRadius={55}
+                    outerRadius={80}
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {deviceDistributionData.map((entry, index) => (
+                    {cameraStatusDistributionData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
                     ))}
                   </Pie>
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="rounded-lg border bg-popover px-2.5 py-1.5 text-xs shadow-lg font-medium">
-                            <span style={{ color: data.color }}>{data.name}: </span>
-                            <span className="font-bold">{data.value}%</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-black text-foreground">58%</span>
+                <span className="text-2xl font-black text-foreground">100%</span>
                 <span className="text-[11px] text-muted-foreground font-medium">
-                  Desktop
+                  Online
                 </span>
               </div>
             </div>
 
-            {/* Custom List Legend */}
-            <div className="w-full grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-border/60">
-              {deviceDistributionData.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-muted-foreground truncate">{item.name}</span>
-                  <span className="ml-auto font-semibold text-foreground">
-                    {item.value}%
-                  </span>
+            {/* Status Legend */}
+            <div className="w-full space-y-2 mt-2 pt-3 border-t border-border/60">
+              {cameraStatusDistributionData.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-muted-foreground">{item.name}</span>
+                  </div>
+                  <span className="font-semibold text-foreground">{item.value} unit</span>
                 </div>
               ))}
             </div>
@@ -378,135 +323,98 @@ export function OverviewPage() {
         </Card>
       </div>
 
-      {/* Global Team Distribution Map */}
-      <GlobalUserMap />
+      {/* Interactive Camera Distribution Map (TN Way Kambas) */}
+      <WayKambasCameraMap />
 
-      {/* Second Row: Bar Chart & Recent Activity Feed */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Bar Chart: Sales Performance vs Targets (2 cols) */}
-        <Card className="lg:col-span-2 border-border/80 bg-card shadow-xs">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base sm:text-lg font-bold">
-                  Sales by Product Category
-                </CardTitle>
-                <CardDescription>
-                  Actual revenue generation vs monthly quota targets.
-                </CardDescription>
-              </div>
-              <Badge variant="secondary" className="w-fit text-xs">
-                Q3 Performance
-              </Badge>
+      {/* Second Row: Latest Registered Cameras & Active GitHub Issues */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Latest Cameras Widget */}
+        <Card className="border-border/80 bg-card shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+            <div>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CameraIcon className="h-4 w-4 text-primary" />
+                Daftar Kamera Terdaftar
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Perangkat kamera pemantauan terkini.
+              </CardDescription>
             </div>
+            <Link to="/cameras">
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-primary">
+                <span>Lihat Semua</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={salesCategoryData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+          <CardContent className="space-y-3 pt-0">
+            <div className="divide-y divide-border/60">
+              {cameras.slice(0, 4).map((cam) => (
+                <div
+                  key={cam.id}
+                  onClick={() => navigate(`/cameras/${cam.id}`)}
+                  className="flex items-center justify-between py-2.5 hover:bg-accent/40 px-2 rounded-lg transition-colors cursor-pointer"
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
-                  <XAxis
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: '#888888' }}
-                    interval={0}
-                    angle={-15}
-                    textAnchor="end"
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: '#888888' }}
-                    tickFormatter={(val) => `$${val / 1000}k`}
-                  />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-xl border bg-popover p-3 text-xs shadow-xl space-y-1">
-                            <p className="font-bold text-foreground">{label}</p>
-                            {payload.map((entry, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between gap-4"
-                              >
-                                <span className="text-muted-foreground">{entry.name}:</span>
-                                <span className="font-bold" style={{ color: entry.color }}>
-                                  {formatCurrency(Number(entry.value))}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="sales" name="Actual Sales" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="target" name="Target Quota" fill="#cbd5e1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Video className="h-4 w-4" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-semibold text-foreground truncate">{cam.name}</p>
+                      <p className="text-[11px] font-mono text-muted-foreground truncate">{cam.macAddress}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    Online
+                  </Badge>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Activity Feed / Mini Table (1 col) */}
-        <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base sm:text-lg font-bold">
-                Recent Activities
+        {/* Active GitHub Issues Widget */}
+        <Card className="border-border/80 bg-card shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+            <div>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                GitHub Issues Aktif
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-primary hover:text-primary/80"
-                onClick={() => toast.info('Navigating to full audit log')}
-              >
-                View all
-              </Button>
+              <CardDescription className="text-xs">
+                Tiket issue terbuka di repositori KinMiu/frontend-kamera.
+              </CardDescription>
             </div>
-            <CardDescription>Latest team and financial events.</CardDescription>
+            <Link to="/issues">
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-primary">
+                <span>Buka Issues</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
           </CardHeader>
-
-          <CardContent className="flex-1 space-y-4 pt-1">
-            <div className="space-y-3.5">
-              {recentActivities.map((act) => (
+          <CardContent className="space-y-3 pt-0">
+            <div className="divide-y divide-border/60">
+              {openIssues.slice(0, 4).map((issue) => (
                 <div
-                  key={act.id}
-                  className="flex items-start gap-3 text-xs group rounded-lg p-2 transition-colors hover:bg-accent/50"
+                  key={issue.id}
+                  onClick={() => navigate('/issues')}
+                  className="flex items-start justify-between py-2.5 hover:bg-accent/40 px-2 rounded-lg transition-colors cursor-pointer"
                 >
-                  <Avatar className="h-8 w-8 shrink-0 mt-0.5 border border-border">
-                    <AvatarImage src={act.userAvatar} />
-                    <AvatarFallback className="text-[10px]">
-                      {act.userName.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-0.5 overflow-hidden">
-                    <p className="leading-snug text-foreground">
-                      <span className="font-semibold">{act.userName}</span>{' '}
-                      <span className="text-muted-foreground">{act.action}</span>{' '}
-                      <span className="font-medium text-foreground">{act.target}</span>
-                    </p>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{act.timestamp}</span>
-                      {act.amount && (
-                        <span
-                          className={`font-semibold ${
-                            act.amount.startsWith('+')
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-rose-600 dark:text-rose-400'
-                          }`}
-                        >
-                          {act.amount}
-                        </span>
-                      )}
+                  <div className="flex items-start gap-2.5 overflow-hidden">
+                    <span className="font-mono text-xs text-primary font-bold mt-0.5">#{issue.number}</span>
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-semibold text-foreground truncate">{issue.title}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                        <span>oleh {issue.user.login}</span>
+                        {issue.labels?.slice(0, 1).map((l) => (
+                          <span key={l.id} className="text-[10px] px-1.5 py-0.2 rounded bg-muted">
+                            {l.name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
                 </div>
               ))}
             </div>
