@@ -151,7 +151,7 @@ export function CameraManagementPage() {
       {
         id: 'select',
         header: ({ table }) => (
-          <div className="flex items-center justify-center w-8">
+          <div className="flex items-center justify-center">
             <Checkbox
               checked={
                 table.getIsAllPageRowsSelected() ||
@@ -159,23 +159,21 @@ export function CameraManagementPage() {
               }
               onCheckedChange={(val) => table.toggleAllPageRowsSelected(!!val)}
               aria-label="Pilih semua baris"
-              className="translate-y-[1px]"
             />
           </div>
         ),
         cell: ({ row }) => (
-          <div className="flex items-center justify-center w-8">
+          <div className="flex items-center justify-center">
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(val) => row.toggleSelected(!!val)}
               aria-label="Pilih baris"
-              className="translate-y-[1px]"
             />
           </div>
         ),
         enableSorting: false,
         enableHiding: false,
-        size: 40,
+        size: 44,
       },
       {
         accessorKey: 'name',
@@ -186,7 +184,7 @@ export function CameraManagementPage() {
             className="-ml-3 h-8 text-xs font-semibold text-foreground/80 hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
-            Nama & ID Kamera
+            Nama Kamera
             {column.getIsSorted() === 'asc' ? (
               <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-primary" />
             ) : column.getIsSorted() === 'desc' ? (
@@ -200,46 +198,53 @@ export function CameraManagementPage() {
           const cam = row.original;
           const isMtx = Boolean(cam.mediamtxEndpoint && cam.mediamtxEndpoint.trim() !== '');
           return (
-            <div className="flex items-center gap-3 py-0.5">
+            <div className="flex items-center gap-3">
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
                   isMtx
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                     : 'bg-primary/10 text-primary border-primary/20'
                 }`}
               >
-                <CameraIcon className="h-5 w-5" />
+                <CameraIcon className="h-4 w-4" />
               </div>
               <div className="flex flex-col min-w-0">
                 <button
                   onClick={() => navigate(`/cameras/${cam.id}`)}
-                  className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors text-left truncate flex items-center gap-1.5 group"
+                  className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors text-left truncate"
                 >
-                  <span className="truncate">{cam.name}</span>
+                  {cam.name}
                 </button>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                    ID: {cam.id.slice(0, 8)}...
-                  </span>
-                  {isMtx ? (
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-1.5 py-0 h-4"
-                    >
-                      MediaMTX Relay
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] font-mono bg-muted text-muted-foreground border-border px-1.5 py-0 h-4"
-                    >
-                      RTSP Direct
-                    </Badge>
-                  )}
-                </div>
+                <span className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                  ID: {cam.id.slice(0, 12)}...
+                </span>
               </div>
             </div>
+          );
+        },
+      },
+      {
+        id: 'status',
+        header: 'Tipe Stream',
+        cell: ({ row }) => {
+          const cam = row.original;
+          const isMtx = Boolean(cam.mediamtxEndpoint && cam.mediamtxEndpoint.trim() !== '');
+          return isMtx ? (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs px-2.5 py-0.5 font-medium whitespace-nowrap"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              MediaMTX Relay
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground border-border text-xs px-2.5 py-0.5 font-medium whitespace-nowrap"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+              RTSP Direct
+            </Badge>
           );
         },
       },
@@ -261,21 +266,17 @@ export function CameraManagementPage() {
           const isCopied = copiedId === `mac-${row.original.id}`;
           return (
             <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="font-mono text-xs bg-muted/40 text-foreground border-border/80 px-2.5 py-1"
-              >
-                <Network className="mr-1.5 h-3 w-3 text-muted-foreground shrink-0" />
-                <span>{mac}</span>
-              </Badge>
+              <span className="font-mono text-xs text-foreground/90 bg-muted/30 px-2 py-1 rounded border border-border/60">
+                {mac}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
                 onClick={() => handleCopy(mac, `mac-${row.original.id}`, 'MAC Address')}
                 title="Salin MAC Address"
               >
-                {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                {isCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
               </Button>
             </div>
           );
@@ -283,70 +284,29 @@ export function CameraManagementPage() {
       },
       {
         accessorKey: 'rtspEndpoint',
-        header: 'Stream Endpoints (RTSP & HLS)',
+        header: 'RTSP Stream URL',
         cell: ({ row }) => {
           const endpoint = row.original.rtspEndpoint;
-          const mediamtx = row.original.mediamtxEndpoint;
-          const parsed = parseMediaMTXUrl(mediamtx || endpoint);
-          const isCopiedRtsp = copiedId === `rtsp-${row.original.id}`;
-          const isCopiedMtx = copiedId === `mtx-${row.original.id}`;
+          const isCopied = copiedId === `rtsp-${row.original.id}`;
 
           return (
-            <div className="flex flex-col gap-1.5 max-w-[340px] py-1">
-              {/* RTSP Source */}
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground bg-muted/30 hover:bg-muted/50 px-2 py-1 rounded-md border border-border/60 truncate flex-1"
-                  title={endpoint}
-                >
-                  <Video className="h-3 w-3 text-primary shrink-0" />
-                  <span className="text-[11px] truncate">{endpoint}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                  onClick={() => handleCopy(endpoint, `rtsp-${row.original.id}`, 'RTSP Fisik URL')}
-                  title="Salin URL RTSP Fisik"
-                >
-                  {isCopiedRtsp ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                </Button>
+            <div className="flex items-center gap-1.5 max-w-[240px]">
+              <div
+                className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground bg-muted/30 px-2 py-1 rounded border border-border/60 truncate flex-1"
+                title={endpoint}
+              >
+                <Video className="h-3 w-3 text-primary shrink-0" />
+                <span className="truncate text-[11px]">{endpoint}</span>
               </div>
-
-              {/* MediaMTX Web / Relay Endpoint */}
-              {mediamtx ? (
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className="flex items-center gap-1.5 text-xs font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 px-2 py-1 rounded-md border border-emerald-500/20 truncate flex-1"
-                    title={parsed?.hlsPlayerUrl || mediamtx}
-                  >
-                    <Tv className="h-3 w-3 text-emerald-500 shrink-0" />
-                    <span className="text-[11px] truncate font-medium">{parsed?.hlsPlayerUrl || mediamtx}</span>
-                  </div>
-                  {parsed && (
-                    <a
-                      href={parsed.hlsPlayerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-emerald-500 shrink-0"
-                      title="Buka Player HLS (Port 8888) di Tab Baru"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={() => handleCopy(parsed ? parsed.hlsPlayerUrl : mediamtx, `mtx-${row.original.id}`, 'MediaMTX Web URL')}
-                    title="Salin MediaMTX Web URL"
-                  >
-                    {isCopiedMtx ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                  </Button>
-                </div>
-              ) : (
-                <span className="text-[10px] text-muted-foreground/60 italic pl-1">- Belum diatur MediaMTX relay -</span>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                onClick={() => handleCopy(endpoint, `rtsp-${row.original.id}`, 'RTSP URL')}
+                title="Salin RTSP URL"
+              >
+                {isCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+              </Button>
             </div>
           );
         },
@@ -356,16 +316,21 @@ export function CameraManagementPage() {
         header: 'Koordinat GPS',
         cell: ({ row }) => {
           const cam = row.original;
-          const hasCoords = cam.latitude != null && cam.longitude != null && !isNaN(Number(cam.latitude)) && !isNaN(Number(cam.longitude));
+          const hasCoords =
+            cam.latitude != null &&
+            cam.longitude != null &&
+            !isNaN(Number(cam.latitude)) &&
+            !isNaN(Number(cam.longitude));
+
           return hasCoords ? (
-            <div className="flex items-center gap-1.5 text-xs font-mono text-foreground/80 bg-muted/30 px-2.5 py-1 rounded-lg border border-border/60 w-fit">
+            <div className="flex items-center gap-1.5 text-xs font-mono text-foreground/90 whitespace-nowrap">
               <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
               <span>
                 {Number(cam.latitude).toFixed(4)}, {Number(cam.longitude).toFixed(4)}
               </span>
             </div>
           ) : (
-            <span className="text-xs text-muted-foreground/60 italic">- Belum diset -</span>
+            <span className="text-xs text-muted-foreground/50 italic">- Belum diset -</span>
           );
         },
       },
@@ -383,7 +348,7 @@ export function CameraManagementPage() {
           </Button>
         ),
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
             <span>{formatDate(row.original.createdAt)}</span>
           </div>
@@ -396,22 +361,22 @@ export function CameraManagementPage() {
           const cam = row.original;
           const parsed = parseMediaMTXUrl(cam.mediamtxEndpoint || cam.rtspEndpoint);
           return (
-            <div className="flex items-center justify-end gap-1 pr-1">
+            <div className="flex items-center justify-end gap-1.5 pr-1">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => navigate(`/cameras/${cam.id}`)}
-                className="h-8 px-2.5 gap-1.5 text-xs text-primary hover:bg-primary/10 hover:text-primary font-medium"
-                title="Buka Detail Stream & Live Player"
+                className="h-7 px-2.5 gap-1 text-xs font-medium hover:text-primary hover:border-primary/40"
+                title="Buka Live Player"
               >
-                <Eye className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Detail</span>
+                <Eye className="h-3 w-3" />
+                <span>Detail</span>
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
                     <span className="sr-only">Menu Opsi</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -430,7 +395,7 @@ export function CameraManagementPage() {
                       className="cursor-pointer text-xs gap-2"
                     >
                       <ExternalLink className="h-3.5 w-3.5 text-emerald-500" />
-                      <span>Buka HLS Web Player</span>
+                      <span>Buka HLS Web Player (Port 8888)</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
@@ -702,11 +667,13 @@ export function CameraManagementPage() {
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
                         {column.id === 'name'
-                          ? 'Nama & ID Kamera'
+                          ? 'Nama Kamera'
+                          : column.id === 'status'
+                          ? 'Tipe Stream'
                           : column.id === 'macAddress'
                           ? 'MAC Address'
                           : column.id === 'rtspEndpoint'
-                          ? 'Stream Endpoints'
+                          ? 'RTSP Stream URL'
                           : column.id === 'latitude'
                           ? 'Koordinat GPS'
                           : column.id === 'createdAt'
@@ -722,7 +689,7 @@ export function CameraManagementPage() {
 
         {/* Table Content */}
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="w-full">
             <TableHeader className="bg-muted/40">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="hover:bg-transparent border-b border-border/80">
@@ -730,7 +697,7 @@ export function CameraManagementPage() {
                     <TableHead
                       key={header.id}
                       style={{ width: header.getSize() }}
-                      className="text-xs font-semibold text-muted-foreground py-3"
+                      className="text-xs font-semibold text-muted-foreground py-3.5 px-4 whitespace-nowrap"
                     >
                       {header.isPlaceholder
                         ? null
@@ -772,7 +739,7 @@ export function CameraManagementPage() {
                     className="hover:bg-muted/40 transition-colors border-b border-border/60"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3 px-4">
+                      <TableCell key={cell.id} className="py-3 px-4 whitespace-nowrap">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
