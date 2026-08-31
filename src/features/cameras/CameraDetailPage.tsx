@@ -408,7 +408,7 @@ export function CameraDetailPage() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-3">
+                {/* <div className="flex items-center justify-between pt-3">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
                     Status Sinyal
@@ -416,7 +416,7 @@ export function CameraDetailPage() {
                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px]">
                     Online (Connected)
                   </Badge>
-                </div>
+                </div> */}
 
                 <div className="flex items-center justify-between pt-3">
                   <span className="text-muted-foreground flex items-center gap-1.5">
@@ -480,7 +480,7 @@ export function CameraDetailPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 pt-0">
+            {/* <CardContent className="space-y-3 pt-0">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Menemukan kendala transmisi RTSP atau konektivitas pada kamera ini? Buat tiket issue di repositori GitHub project.
               </p>
@@ -490,7 +490,7 @@ export function CameraDetailPage() {
                   <span>Buka GitHub Issues</span>
                 </Button>
               </Link>
-            </CardContent>
+            </CardContent> */}
           </Card>
         </div>
       </div>
