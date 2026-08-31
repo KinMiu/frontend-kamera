@@ -28,7 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { useGetCameraById } from '@/features/cameras/hooks/use-cameras';
 import { CameraFormModal } from '@/features/cameras/components/CameraFormModal';
 import { DeleteCameraDialog } from '@/features/cameras/components/DeleteCameraDialog';
-import { MediaMTXLivePlayer } from '@/features/cameras/components/MediaMTXLivePlayer';
+import { MediaMTXLivePlayer, parseMediaMTXUrl } from '@/features/cameras/components/MediaMTXLivePlayer';
 import { getCoordinatesForCamera } from '@/features/dashboard/components/WayKambasCameraMap';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -226,69 +226,115 @@ export function CameraDetailPage() {
               />
 
               {/* RTSP & MediaMTX Direct Link Boxes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Radio className="h-3.5 w-3.5 text-primary" />
-                      RTSP Kamera Fisik (Port 554)
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopy(camera.rtspEndpoint, 'rtsp', 'RTSP Fisik URL')}
-                      className="h-7 text-xs gap-1.5"
-                    >
-                      {copiedKey === 'rtsp' ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                      <span>Salin</span>
-                    </Button>
-                  </div>
-                  <code className="block rounded-lg bg-background p-2.5 font-mono text-xs text-foreground border break-all select-all">
-                    {camera.rtspEndpoint}
-                  </code>
-                </div>
+              {(() => {
+                const parsed = parseMediaMTXUrl(camera.mediamtxEndpoint || camera.rtspEndpoint);
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* 1. RTSP Kamera Fisik */}
+                    <div className="rounded-xl border border-border/80 bg-muted/20 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
+                          <Radio className="h-3.5 w-3.5 text-primary shrink-0" />
+                          RTSP Fisik (Port 554)
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopy(camera.rtspEndpoint, 'rtsp', 'RTSP Fisik URL')}
+                          className="h-6 px-2 text-xs gap-1"
+                        >
+                          {copiedKey === 'rtsp' ? (
+                            <Check className="h-3 w-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                          <span>Salin</span>
+                        </Button>
+                      </div>
+                      <code className="block rounded-lg bg-background p-2 font-mono text-[11px] text-foreground border break-all select-all">
+                        {camera.rtspEndpoint}
+                      </code>
+                    </div>
 
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Radio className="h-3.5 w-3.5 text-emerald-500" />
-                      MediaMTX Bypass / Relay URL
-                    </span>
-                    {camera.mediamtxEndpoint ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopy(camera.mediamtxEndpoint!, 'mediamtx', 'MediaMTX URL')}
-                        className="h-7 text-xs gap-1.5"
-                      >
-                        {copiedKey === 'mediamtx' ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    {/* 2. MediaMTX Web Playback (Port 8888) */}
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
+                          <Radio className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          HLS Web (Port 8888)
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {parsed && (
+                            <a
+                              href={parsed.hlsPlayerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-emerald-500"
+                              title="Buka web player di tab baru"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopy(parsed ? parsed.hlsPlayerUrl : '', 'hls', 'HLS Web URL')}
+                            className="h-6 px-2 text-xs gap-1"
+                          >
+                            {copiedKey === 'hls' ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>Salin</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <code className="block rounded-lg bg-background p-2 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 border break-all select-all">
+                        {parsed ? parsed.hlsPlayerUrl : '- Belum diatur -'}
+                      </code>
+                    </div>
+
+                    {/* 3. MediaMTX RTSP Relay (Port 8554 - Worker) */}
+                    <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
+                          <Radio className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          RTSP Relay (Port 8554)
+                        </span>
+                        {camera.mediamtxEndpoint ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopy(camera.mediamtxEndpoint!, 'mediamtx', 'RTSP Relay URL')}
+                            className="h-6 px-2 text-xs gap-1"
+                          >
+                            {copiedKey === 'mediamtx' ? (
+                              <Check className="h-3 w-3 text-blue-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>Salin</span>
+                          </Button>
                         ) : (
-                          <Copy className="h-3.5 w-3.5" />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditModalOpen(true)}
+                            className="h-6 px-2 text-xs text-amber-500 gap-1"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                            <span>Set URL</span>
+                          </Button>
                         )}
-                        <span>Salin</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditModalOpen(true)}
-                        className="h-7 text-xs text-amber-500 hover:text-amber-600 gap-1"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>Set URL</span>
-                      </Button>
-                    )}
+                      </div>
+                      <code className="block rounded-lg bg-background p-2 font-mono text-[11px] text-blue-600 dark:text-blue-400 border break-all select-all">
+                        {camera.mediamtxEndpoint || '- Belum diatur -'}
+                      </code>
+                    </div>
                   </div>
-                  <code className="block rounded-lg bg-background p-2.5 font-mono text-xs text-foreground border break-all select-all">
-                    {camera.mediamtxEndpoint || '- Belum ada URL MediaMTX bypass -'}
-                  </code>
-                </div>
-              </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>

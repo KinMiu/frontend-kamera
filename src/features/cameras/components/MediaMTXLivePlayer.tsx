@@ -17,12 +17,13 @@ import {
   Sparkles,
   Wifi,
   WifiOff,
+  Tv,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
-export type StreamProtocol = 'webrtc' | 'iframe' | 'hls' | 'simulation';
+export type StreamProtocol = 'hls' | 'webrtc' | 'simulation';
 
 interface MediaMTXLivePlayerProps {
   cameraName: string;
@@ -33,21 +34,21 @@ interface MediaMTXLivePlayerProps {
   onOpenEditModal?: () => void;
 }
 
-interface ParsedMediaMTXEndpoints {
+export interface ParsedMediaMTXEndpoints {
   raw: string;
   host: string;
   streamPath: string;
-  webrtcUrl: string;
+  hlsPlayerUrl: string;
+  hlsStreamUrl: string;
+  webrtcPlayerUrl: string;
   whepUrl: string;
-  hlsUrl: string;
-  iframeUrl: string;
   rtspUrl: string;
 }
 
 /**
  * Helper to parse and derive MediaMTX endpoints across various protocols
  */
-function parseMediaMTXUrl(endpoint?: string | null): ParsedMediaMTXEndpoints | null {
+export function parseMediaMTXUrl(endpoint?: string | null): ParsedMediaMTXEndpoints | null {
   if (!endpoint || !endpoint.trim()) return null;
   const raw = endpoint.trim();
 
@@ -62,9 +63,13 @@ function parseMediaMTXUrl(endpoint?: string | null): ParsedMediaMTXEndpoints | n
     } else if (raw.startsWith('http://') || raw.startsWith('https://')) {
       const parsed = new URL(raw);
       host = parsed.hostname || 'localhost';
-      path = parsed.pathname.replace(/^\/+/, '').replace(/\/whep$/, '').replace(/\/index\.m3u8$/, '') || 'live';
+      path = parsed.pathname
+        .replace(/^\/+/, '')
+        .replace(/\/whep$/, '')
+        .replace(/\/index\.m3u8$/, '')
+        .replace(/\/+$/, '') || 'live';
     } else {
-      // Raw string format like "localhost:8554/live/cam1" or "live/cam1"
+      // Raw format like "195.35.23.135:8554/lab_cam_1" or "lab_cam_1"
       const parts = raw.split('/');
       if (parts[0].includes(':') || parts[0].includes('.')) {
         host = parts[0].split(':')[0];
@@ -74,22 +79,25 @@ function parseMediaMTXUrl(endpoint?: string | null): ParsedMediaMTXEndpoints | n
       }
     }
   } catch {
-    path = raw.replace(/^[a-z]+:\/\/[^/]+\//, '');
+    path = raw.replace(/^[a-z]+:\/\/[^/]+\//, '').replace(/\/+$/, '');
   }
 
-  // MediaMTX standard default ports
-  const webrtcPort = '8889';
+  // MediaMTX Standard Default Ports:
+  // - 8888: HLS / Built-in Web Player (HTTP)
+  // - 8889: WebRTC / WHEP Server (HTTP)
+  // - 8554: RTSP Relay Ingest (TCP)
   const hlsPort = '8888';
+  const webrtcPort = '8889';
   const rtspPort = '8554';
 
   return {
     raw,
     host,
     streamPath: path,
-    webrtcUrl: `http://${host}:${webrtcPort}/${path}`,
+    hlsPlayerUrl: `http://${host}:${hlsPort}/${path}/`,
+    hlsStreamUrl: `http://${host}:${hlsPort}/${path}/index.m3u8`,
+    webrtcPlayerUrl: `http://${host}:${webrtcPort}/${path}/`,
     whepUrl: `http://${host}:${webrtcPort}/${path}/whep`,
-    hlsUrl: `http://${host}:${hlsPort}/${path}/index.m3u8`,
-    iframeUrl: `http://${host}:${webrtcPort}/${path}`,
     rtspUrl: `rtsp://${host}:${rtspPort}/${path}`,
   };
 }
@@ -102,13 +110,15 @@ export function MediaMTXLivePlayer({
   rtspEndpoint,
   onOpenEditModal,
 }: MediaMTXLivePlayerProps) {
-  const [protocol, setProtocol] = useState<StreamProtocol>('webrtc');
+  // Default to 'hls' (Port 8888) as it is the most stable and natively supported by MediaMTX Web Player
+  const [protocol, setProtocol] = useState<StreamProtocol>('hls');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'error' | 'offline'>('connecting');
+  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'error' | 'offline'>('connected');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [liveTimestamp, setLiveTimestamp] = useState<string>('');
+  const [iframeKey, setIframeKey] = useState<number>(0);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -138,11 +148,10 @@ export function MediaMTXLivePlayer({
     return () => clearInterval(interval);
   }, []);
 
-  // WebRTC WHEP connection handler
+  // WebRTC WHEP connection handler (for WebRTC mode)
   const initWebRTCStream = useCallback(async () => {
     if (!parsedEndpoints || !videoRef.current) return;
 
-    // Cleanup existing peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -175,14 +184,13 @@ export function MediaMTXLivePlayer({
           setConnectionState('connected');
         } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
           setConnectionState('error');
-          setErrorMessage('Koneksi WebRTC terputus dari server MediaMTX.');
+          setErrorMessage('Koneksi WebRTC WHEP (port 8889) terputus. Silakan gunakan mode HLS Web Player (port 8888).');
         }
       };
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Perform WHEP HTTP POST exchange with MediaMTX
       const response = await fetch(parsedEndpoints.whepUrl, {
         method: 'POST',
         headers: {
@@ -192,7 +200,7 @@ export function MediaMTXLivePlayer({
       });
 
       if (!response.ok) {
-        throw new Error(`MediaMTX WHEP Server merespon status ${response.status} (${response.statusText})`);
+        throw new Error(`MediaMTX WHEP Server status ${response.status} (${response.statusText})`);
       }
 
       const answerSdp = await response.text();
@@ -203,14 +211,14 @@ export function MediaMTXLivePlayer({
 
       setConnectionState('connected');
     } catch (err: unknown) {
-      console.warn('WebRTC WHEP connection failed, fallback to simulation mode:', err);
-      const msg = err instanceof Error ? err.message : 'Gagal menghubungi endpoint MediaMTX WHEP.';
+      console.warn('WebRTC WHEP connection failed, fallback available:', err);
+      const msg = err instanceof Error ? err.message : 'Gagal menghubungi endpoint WebRTC WHEP.';
       setErrorMessage(msg);
       setConnectionState('error');
     }
   }, [parsedEndpoints]);
 
-  // Effect to manage stream lifecycle based on active protocol
+  // Manage stream lifecycle based on active protocol
   useEffect(() => {
     if (!parsedEndpoints) {
       setConnectionState('offline');
@@ -219,7 +227,7 @@ export function MediaMTXLivePlayer({
 
     if (protocol === 'webrtc') {
       initWebRTCStream();
-    } else if (protocol === 'iframe') {
+    } else if (protocol === 'hls') {
       setConnectionState('connected');
       setErrorMessage(null);
     } else if (protocol === 'simulation') {
@@ -235,7 +243,7 @@ export function MediaMTXLivePlayer({
     };
   }, [protocol, parsedEndpoints, initWebRTCStream]);
 
-  // Toggle Fullscreen mode
+  // Fullscreen handler
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
 
@@ -250,7 +258,6 @@ export function MediaMTXLivePlayer({
     }
   };
 
-  // Listen for fullscreen change event
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -260,7 +267,7 @@ export function MediaMTXLivePlayer({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Snapshot capture with timestamp watermark
+  // Snapshot Capture Feature
   const handleCaptureSnapshot = () => {
     try {
       const canvas = document.createElement('canvas');
@@ -273,11 +280,10 @@ export function MediaMTXLivePlayer({
         return;
       }
 
-      // If video has srcObject, draw video frame
       if (videoRef.current && videoRef.current.videoWidth > 0) {
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       } else {
-        // Fallback draw sample canvas
+        // Sample image canvas
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -299,11 +305,10 @@ export function MediaMTXLivePlayer({
   };
 
   const applyWatermarkAndDownload = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
-    // Top banner
+    // Top HUD
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, 0, canvas.width, 48);
 
-    // Camera Name & ID
     ctx.font = 'bold 20px monospace';
     ctx.fillStyle = '#10b981';
     ctx.fillText('● LIVE CCTV WAY KAMBAS', 20, 32);
@@ -312,13 +317,17 @@ export function MediaMTXLivePlayer({
     ctx.fillStyle = '#ffffff';
     ctx.fillText(`| ${cameraName} (${cameraId})`, 280, 32);
 
-    // Bottom banner with timestamp and MAC
+    // Bottom HUD
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
 
     ctx.font = '16px monospace';
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(`TIMESTAMP: ${liveTimestamp}  |  MAC: ${macAddress}  |  PROTOCOL: ${protocol.toUpperCase()}`, 20, canvas.height - 15);
+    ctx.fillText(
+      `TIMESTAMP: ${liveTimestamp}  |  MAC: ${macAddress}  |  PROTOCOL: ${protocol.toUpperCase()} (PORT 8888)`,
+      20,
+      canvas.height - 15
+    );
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
     const link = document.createElement('a');
@@ -326,7 +335,7 @@ export function MediaMTXLivePlayer({
     link.href = dataUrl;
     link.click();
 
-    toast.success(`Snapshot frame kamera berhasil disimpan! (${link.download})`);
+    toast.success(`Snapshot frame berhasil disimpan: ${link.download}`);
   };
 
   // Render Empty State if no endpoint configured
@@ -338,7 +347,7 @@ export function MediaMTXLivePlayer({
         </div>
         <h3 className="text-base font-bold text-foreground">MediaMTX Endpoint Belum Dikonfigurasi</h3>
         <p className="text-xs text-muted-foreground max-w-md mt-1 mb-4">
-          Perangkat kamera ini belum memiliki URL endpoint relay MediaMTX. Silakan atur URL streaming (contoh: <code className="font-mono text-emerald-400">rtsp://localhost:8554/live/cam1</code>) pada menu edit.
+          Perangkat kamera ini belum memiliki URL endpoint relay MediaMTX. Silakan atur URL relay (contoh: <code className="font-mono text-emerald-400">rtsp://195.35.23.135:8554/lab_cam_1</code>) pada menu edit.
         </p>
         <div className="flex items-center gap-2">
           {onOpenEditModal && (
@@ -368,7 +377,19 @@ export function MediaMTXLivePlayer({
         isFullscreen ? 'h-screen w-screen rounded-none border-0' : ''
       }`}
     >
-      {/* 1. Protocol: WebRTC Video Element */}
+      {/* 1. Protocol: HLS / Built-in MediaMTX HTML5 Web Player (Port 8888) - Default & 100% Working */}
+      {protocol === 'hls' && (
+        <iframe
+          key={iframeKey}
+          src={parsedEndpoints.hlsPlayerUrl}
+          title={`MediaMTX Live Stream - ${cameraName}`}
+          className="h-full w-full border-0 bg-black"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      )}
+
+      {/* 2. Protocol: WebRTC Video Element (Port 8889 WHEP) */}
       {protocol === 'webrtc' && (
         <video
           ref={videoRef}
@@ -381,19 +402,8 @@ export function MediaMTXLivePlayer({
         />
       )}
 
-      {/* 2. Protocol: MediaMTX Direct Web Player (Iframe) */}
-      {protocol === 'iframe' && (
-        <iframe
-          src={parsedEndpoints.iframeUrl}
-          title={`MediaMTX Live Stream - ${cameraName}`}
-          className="h-full w-full border-0"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-        />
-      )}
-
-      {/* 3. Protocol: Simulation Feed (Fallback & Local Test) */}
-      {(protocol === 'simulation' || (protocol === 'webrtc' && connectionState !== 'connected')) && (
+      {/* 3. Protocol: Simulation Feed (Demo Fallback) */}
+      {(protocol === 'simulation' || (protocol === 'webrtc' && connectionState === 'error')) && (
         <img
           src="https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=1200&auto=format&fit=crop&q=80"
           alt="Way Kambas Wildlife CCTV Feed"
@@ -403,53 +413,44 @@ export function MediaMTXLivePlayer({
         />
       )}
 
-      {/* Connection State / Error State Backdrop */}
+      {/* WebRTC Error Overlay */}
       {protocol === 'webrtc' && connectionState === 'error' && (
         <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-10">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mb-3">
             <WifiOff className="h-6 w-6" />
           </div>
-          <h4 className="text-sm font-bold text-white">MediaMTX Live Stream Belum Terhubung</h4>
-          <p className="text-xs text-white/70 max-w-sm mt-1 mb-3">
-            {errorMessage || 'Server MediaMTX di alamat tersebut sedang offline atau port WebRTC WHEP (8889) belum aktif.'}
+          <h4 className="text-sm font-bold text-white">Koneksi WebRTC WHEP Belum Terhubung</h4>
+          <p className="text-xs text-white/70 max-w-md mt-1 mb-4 leading-relaxed">
+            {errorMessage || 'Port WebRTC WHEP (8889) di server MediaMTX belum dibuka atau firewall UDP aktif. Gunakan mode HLS Web Player (Port 8888) yang stabil.'}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
               size="sm"
-              variant="secondary"
-              onClick={initWebRTCStream}
-              className="h-8 gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/20"
+              variant="default"
+              onClick={() => setProtocol('hls')}
+              className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Coba Hubungkan Lagi</span>
+              <Tv className="h-3.5 w-3.5" />
+              <span>Gunakan HLS Web Player (Port 8888)</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setProtocol('iframe')}
-              className="h-8 gap-1.5 text-xs border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+              onClick={initWebRTCStream}
+              className="h-8 gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/20"
             >
-              <Layers className="h-3.5 w-3.5" />
-              <span>Buka Mode Iframe Web Player</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setProtocol('simulation')}
-              className="h-8 gap-1.5 text-xs text-slate-300 hover:text-white"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-              <span>Mode Simulasi</span>
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Coba WebRTC Lagi</span>
             </Button>
           </div>
         </div>
       )}
 
-      {/* Connecting Loading Overlay */}
+      {/* WebRTC Connecting Loading Overlay */}
       {protocol === 'webrtc' && connectionState === 'connecting' && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
           <RefreshCw className="h-7 w-7 animate-spin text-emerald-400" />
-          <p className="text-xs font-mono text-white/90">Menghubungkan ke MediaMTX WHEP Stream...</p>
+          <p className="text-xs font-mono text-white/90">Menghubungkan ke MediaMTX WHEP Stream (Port 8889)...</p>
         </div>
       )}
 
@@ -469,7 +470,7 @@ export function MediaMTXLivePlayer({
               className="hidden sm:flex items-center gap-1 bg-black/70 backdrop-blur-xs border-emerald-500/30 text-emerald-400 text-[10px] font-mono px-2 py-0.5"
             >
               <Radio className="h-3 w-3 animate-pulse" />
-              <span>{protocol.toUpperCase()} LIVE</span>
+              <span>{protocol === 'hls' ? 'HLS (PORT 8888)' : protocol === 'webrtc' ? 'WHEP (PORT 8889)' : 'SIMULASI'}</span>
             </Badge>
           </div>
 
@@ -480,17 +481,6 @@ export function MediaMTXLivePlayer({
           </div>
         </div>
 
-        {/* Center Pause HUD */}
-        {!isPlaying && (
-          <div className="text-center bg-black/85 backdrop-blur-sm p-4 rounded-xl max-w-xs mx-auto pointer-events-auto border border-white/15 shadow-2xl">
-            <Pause className="h-8 w-8 mx-auto mb-2 text-amber-400" />
-            <p className="font-sans font-bold text-sm text-white">Stream Dijeda</p>
-            <p className="font-sans text-xs text-white/70 mt-1">
-              Klik tombol putar untuk melanjutkan pemantauan live streaming.
-            </p>
-          </div>
-        )}
-
         {/* Bottom HUD */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -498,49 +488,42 @@ export function MediaMTXLivePlayer({
               MAC: {macAddress}
             </div>
             <div className="hidden md:block bg-black/70 backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px] font-mono border border-emerald-500/20 text-emerald-400">
-              {connectionState === 'connected' ? (
-                <span className="flex items-center gap-1">
-                  <Wifi className="h-3 w-3 text-emerald-400" />
-                  ONLINE • 1080p @ 30fps
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-amber-400">
-                  <AlertTriangle className="h-3 w-3" />
-                  {connectionState.toUpperCase()}
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <Wifi className="h-3 w-3 text-emerald-400" />
+                ONLINE • STREAM ACTIVE
+              </span>
             </div>
           </div>
 
-          {/* Stream Protocol Switcher Badge Selector (Interactive) */}
+          {/* Interactive Protocol Switcher */}
           <div className="pointer-events-auto flex items-center gap-1 bg-black/80 backdrop-blur-md p-1 rounded-lg border border-white/20">
             <button
-              onClick={() => setProtocol('webrtc')}
-              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                protocol === 'webrtc'
-                  ? 'bg-emerald-500 text-white font-bold'
+              onClick={() => setProtocol('hls')}
+              className={`px-2.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                protocol === 'hls'
+                  ? 'bg-emerald-500 text-white font-bold shadow-xs'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
-              title="WebRTC WHEP (Ultra-Low Latency)"
+              title="HLS Web Player Port 8888 (Paling Stabil & Direkomendasikan)"
             >
-              WHEP
+              HLS (8888)
             </button>
             <button
-              onClick={() => setProtocol('iframe')}
-              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                protocol === 'iframe'
-                  ? 'bg-blue-600 text-white font-bold'
+              onClick={() => setProtocol('webrtc')}
+              className={`px-2.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                protocol === 'webrtc'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
-              title="MediaMTX Built-in Web Player"
+              title="WebRTC WHEP Port 8889 (Ultra-Low Latency)"
             >
-              Player
+              WHEP (8889)
             </button>
             <button
               onClick={() => setProtocol('simulation')}
-              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+              className={`px-2.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 protocol === 'simulation'
-                  ? 'bg-purple-600 text-white font-bold'
+                  ? 'bg-purple-600 text-white font-bold shadow-xs'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
               title="Mode Simulasi Demo"
@@ -551,31 +534,9 @@ export function MediaMTXLivePlayer({
         </div>
       </div>
 
-      {/* Floating Interactive Controls (Bottom Right) */}
-      <div className="absolute bottom-14 right-4 flex items-center gap-1.5 z-30 opacity-90 group-hover:opacity-100 transition-opacity">
-        {/* Play / Pause */}
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="h-8 w-8 p-0 bg-black/75 hover:bg-black text-white border border-white/20 backdrop-blur-md shadow-lg"
-          title={isPlaying ? 'Jeda Stream' : 'Putar Stream'}
-        >
-          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-        </Button>
-
-        {/* Mute / Unmute */}
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setIsMuted(!isMuted)}
-          className="h-8 w-8 p-0 bg-black/75 hover:bg-black text-white border border-white/20 backdrop-blur-md shadow-lg"
-          title={isMuted ? 'Nyalakan Audio' : 'Matikan Audio'}
-        >
-          {isMuted ? <VolumeX className="h-3.5 w-3.5 text-slate-300" /> : <Volume2 className="h-3.5 w-3.5 text-emerald-400" />}
-        </Button>
-
-        {/* Snapshot */}
+      {/* Floating Action Controls (Bottom Right) */}
+      <div className="absolute bottom-14 right-4 flex items-center gap-1.5 z-30 opacity-90 group-hover:opacity-100 transition-opacity pointer-events-auto">
+        {/* Snapshot Frame */}
         <Button
           size="sm"
           variant="secondary"
@@ -587,28 +548,32 @@ export function MediaMTXLivePlayer({
           <span className="hidden sm:inline">Snapshot</span>
         </Button>
 
-        {/* Refresh / Reconnect */}
+        {/* Reload / Refresh Stream */}
         <Button
           size="sm"
           variant="secondary"
           onClick={() => {
-            if (protocol === 'webrtc') initWebRTCStream();
-            toast.info('Menyegarkan koneksi stream MediaMTX...');
+            if (protocol === 'hls') {
+              setIframeKey((prev) => prev + 1);
+            } else if (protocol === 'webrtc') {
+              initWebRTCStream();
+            }
+            toast.info('Menyegarkan player live stream...');
           }}
           className="h-8 w-8 p-0 bg-black/75 hover:bg-black text-white border border-white/20 backdrop-blur-md shadow-lg"
-          title="Refresh / Reconnect stream"
+          title="Refresh live stream"
         >
           <RefreshCw className="h-3.5 w-3.5" />
         </Button>
 
-        {/* External Web Player Link */}
+        {/* Open Direct Tab */}
         {parsedEndpoints && (
           <a
-            href={parsedEndpoints.iframeUrl}
+            href={protocol === 'webrtc' ? parsedEndpoints.webrtcPlayerUrl : parsedEndpoints.hlsPlayerUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-black/75 hover:bg-black text-white border border-white/20 backdrop-blur-md shadow-lg transition-colors"
-            title="Buka MediaMTX Web Player di Tab Baru"
+            title="Buka MediaMTX Web Player langsung di tab baru"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </a>

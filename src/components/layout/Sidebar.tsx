@@ -27,6 +27,8 @@ import {
 import { env } from '@/config/env';
 import { authApi } from '@/features/auth/api/auth-api';
 
+import { useGetCameras } from '@/features/cameras/hooks/use-cameras';
+
 interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -46,6 +48,9 @@ export function Sidebar({
   const navigate = useNavigate();
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(authApi.getStoredUser());
+
+  const { data: camerasResponse } = useGetCameras({ page: 1, pageSize: 1 });
+  const cameraCount = camerasResponse?.total ?? (camerasResponse?.data?.length || 0);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -80,20 +85,20 @@ export function Sidebar({
           name: 'Manajemen Kamera',
           path: '/cameras',
           icon: Camera,
-          badge: '8',
+          badge: cameraCount > 0 ? String(cameraCount) : 'CCTV',
         },
-        {
-          name: 'GitHub Issues',
-          path: '/issues',
-          icon: AlertCircle,
-          badge: 'Active',
-        },
-        {
-          name: 'Form Showcase',
-          path: '/forms',
-          icon: FileCode2,
-          badge: 'Demo',
-        },
+        // {
+        //   name: 'GitHub Issues',
+        //   path: '/issues',
+        //   icon: AlertCircle,
+        //   badge: 'Active',
+        // },
+        // {
+        //   name: 'Form Showcase',
+        //   path: '/forms',
+        //   icon: FileCode2,
+        //   badge: 'Demo',
+        // },
       ],
     },
   ];
