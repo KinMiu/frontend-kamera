@@ -266,4 +266,13 @@ export const camerasApi = {
     }
     return { success: true, count: ids.length };
   },
+
+  async fetchSnapshotBlob(id: string): Promise<Blob> {
+    const res = await authenticatedFetch(`${env.apiBaseUrl}/devices/${id}/snapshot`);
+    if (!res.ok) {
+      throw new Error(`Gagal mengambil frame snapshot (${res.status} ${res.statusText})`);
+    }
+    return await res.blob();
+  },
 };
+

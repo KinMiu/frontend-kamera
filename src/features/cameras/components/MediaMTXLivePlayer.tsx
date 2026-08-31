@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { camerasApi } from '@/features/cameras/api/cameras-api';
 import { toast } from 'sonner';
 
 export type StreamProtocol = 'hls' | 'webrtc' | 'simulation';
@@ -265,72 +266,70 @@ export function MediaMTXLivePlayer({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Snapshot Capture Feature
-  const handleCaptureSnapshot = () => {
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  // Snapshot Capture Feature: Fetch and render real camera frame with CCTV watermark
+  const handleCaptureSnapshot = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    const toastId = toast.loading('Mengambil frame snapshot live kamera...');
+
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        toast.error('Gagal menginisialisasi canvas snapshot');
-        return;
-      }
-
-      // If WebRTC video element has video frame
+      // 1. If WebRTC video element has an active video frame
       if (protocol === 'webrtc' && videoRef.current && videoRef.current.videoWidth > 0) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+          applyWatermarkAndDownload(canvas, ctx);
+          toast.success('Snapshot frame kamera berhasil disimpan!', { id: toastId });
+          setIsCapturing(false);
+          return;
+        }
+      }
+
+      // 2. Fetch real live JPEG frame from backend RTSP snapshot API
+      const blob = await camerasApi.fetchSnapshotBlob(cameraId);
+      const imgUrl = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1280;
+        canvas.height = img.naturalHeight || 720;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          toast.error('Gagal menginisialisasi canvas snapshot', { id: toastId });
+          URL.revokeObjectURL(imgUrl);
+          setIsCapturing(false);
+          return;
+        }
+
+        // Draw the real live video frame
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(imgUrl);
+
+        // Apply official CCTV HUD watermark
         applyWatermarkAndDownload(canvas, ctx);
-        return;
-      }
+        toast.success('Snapshot frame kamera live berhasil disimpan!', { id: toastId });
+        setIsCapturing(false);
+      };
 
-      // For HLS mode: Draw snapshot background with CCTV HUD
-      ctx.fillStyle = '#090d16';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      img.onerror = () => {
+        URL.revokeObjectURL(imgUrl);
+        setIsCapturing(false);
+        toast.error('Gagal memproses frame gambar snapshot.', { id: toastId });
+      };
 
-      // Grid line pattern
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      // Crosshair center
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
-      ctx.lineWidth = 2;
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx - 30, cy);
-      ctx.lineTo(cx + 30, cy);
-      ctx.moveTo(cx, cy - 30);
-      ctx.lineTo(cx, cy + 30);
-      ctx.stroke();
-
-      // Center live camera info text
-      ctx.font = 'bold 22px monospace';
-      ctx.fillStyle = '#10b981';
-      ctx.textAlign = 'center';
-      ctx.fillText(`[ ${cameraName.toUpperCase()} - LIVE STREAM LOG SNAPSHOT ]`, cx, cy - 10);
-      ctx.font = '16px monospace';
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillText(`RTSP: ${parsedEndpoints?.rtspUrl || rtspEndpoint}`, cx, cy + 25);
-      ctx.fillText(`MEDIAMTX: ${parsedEndpoints?.hlsPlayerUrl}`, cx, cy + 50);
-
-      applyWatermarkAndDownload(canvas, ctx);
-    } catch (e) {
-      console.error('Snapshot capture error:', e);
-      toast.error('Gagal mengambil snapshot kamera');
+      img.src = imgUrl;
+    } catch (err: unknown) {
+      console.error('Snapshot capture error:', err);
+      setIsCapturing(false);
+      const msg = err instanceof Error ? err.message : 'Gagal mengambil snapshot dari live stream.';
+      toast.error(msg, { id: toastId });
     }
   };
 
@@ -563,12 +562,13 @@ export function MediaMTXLivePlayer({
         <Button
           size="sm"
           variant="secondary"
+          disabled={isCapturing}
           onClick={handleCaptureSnapshot}
           className="h-8 px-2.5 gap-1.5 text-xs bg-black/75 hover:bg-black text-white border border-white/20 backdrop-blur-md shadow-lg font-medium"
-          title="Ambil snapshot foto frame live"
+          title="Ambil snapshot foto frame live kamera"
         >
-          <CameraIcon className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Snapshot</span>
+          <CameraIcon className={`h-3.5 w-3.5 text-emerald-400 ${isCapturing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">{isCapturing ? 'Mengambil...' : 'Snapshot'}</span>
         </Button>
 
         {/* Reload / Refresh Stream */}
