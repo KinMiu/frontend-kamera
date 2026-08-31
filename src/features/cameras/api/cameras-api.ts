@@ -28,10 +28,11 @@ function saveStoredCameras(cameras: Camera[]): void {
 
 async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = authApi.getAccessToken();
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(env.apiKey ? { [env.apiKeyHeader]: env.apiKey } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
 
   let response = await fetch(url, { ...options, headers });
@@ -40,7 +41,7 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
     // Attempt token refresh
     const refreshed = await authApi.refreshToken();
     if (refreshed?.access_token) {
-      const retryHeaders = {
+      const retryHeaders: Record<string, string> = {
         ...headers,
         Authorization: `Bearer ${refreshed.access_token}`,
       };
@@ -185,6 +186,9 @@ export const camerasApi = {
       name: payload.name.trim(),
       macAddress: payload.macAddress.trim(),
       rtspEndpoint: payload.rtspEndpoint.trim(),
+      mediamtxEndpoint: payload.mediamtxEndpoint ? payload.mediamtxEndpoint.trim() : null,
+      latitude: payload.latitude ?? null,
+      longitude: payload.longitude ?? null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       userId: 'usr-admin-1',
@@ -222,6 +226,11 @@ export const camerasApi = {
       ...(payload.name ? { name: payload.name.trim() } : {}),
       ...(payload.macAddress ? { macAddress: payload.macAddress.trim() } : {}),
       ...(payload.rtspEndpoint ? { rtspEndpoint: payload.rtspEndpoint.trim() } : {}),
+      ...(payload.mediamtxEndpoint !== undefined
+        ? { mediamtxEndpoint: payload.mediamtxEndpoint ? payload.mediamtxEndpoint.trim() : null }
+        : {}),
+      ...(payload.latitude !== undefined ? { latitude: payload.latitude } : {}),
+      ...(payload.longitude !== undefined ? { longitude: payload.longitude } : {}),
       updatedAt: new Date().toISOString(),
     };
 

@@ -62,11 +62,16 @@ export const authApi = {
 
   async login(payload: LoginPayload): Promise<AuthResponse> {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (env.apiKey) {
+        headers[env.apiKeyHeader] = env.apiKey;
+      }
+
       const res = await fetch(`${env.apiBaseUrl}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -97,11 +102,16 @@ export const authApi = {
     if (!refresh_token) return null;
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (env.apiKey) {
+        headers[env.apiKeyHeader] = env.apiKey;
+      }
+
       const res = await fetch(`${env.apiBaseUrl}/auth/refresh`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ refreshToken: refresh_token }),
       });
 
@@ -129,11 +139,16 @@ export const authApi = {
     const token = this.getAccessToken();
     if (token) {
       try {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+        };
+        if (env.apiKey) {
+          headers[env.apiKeyHeader] = env.apiKey;
+        }
+
         await fetch(`${env.apiBaseUrl}/auth/logout`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers,
         });
       } catch (e) {
         console.warn('Logout API request failed:', e);

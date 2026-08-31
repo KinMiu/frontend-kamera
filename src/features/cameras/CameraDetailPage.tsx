@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { useGetCameraById } from '@/features/cameras/hooks/use-cameras';
 import { CameraFormModal } from '@/features/cameras/components/CameraFormModal';
 import { DeleteCameraDialog } from '@/features/cameras/components/DeleteCameraDialog';
+import { MediaMTXLivePlayer } from '@/features/cameras/components/MediaMTXLivePlayer';
 import { getCoordinatesForCamera } from '@/features/dashboard/components/WayKambasCameraMap';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -38,7 +39,6 @@ export function CameraDetailPage() {
 
   const { data: camera, isLoading, isError } = useGetCameraById(id || '');
 
-  const [isPlaying, setIsPlaying] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -193,128 +193,101 @@ export function CameraDetailPage() {
 
       {/* Main Grid: Stream Player + Details */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: RTSP Live Player Preview */}
+        {/* Left 2 Cols: RTSP & MediaMTX Live Player Preview */}
         <div className="space-y-6 lg:col-span-2">
           <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <Video className="h-4 w-4 text-primary" />
-                  Live RTSP Stream Monitor
+                  Live Stream Monitor (MediaMTX Relay)
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Streaming langsung dari endpoint RTSP perangkat di Way Kambas.
+                  Streaming langsung dari endpoint RTSP / WebRTC MediaMTX di kawasan Way Kambas.
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="font-mono text-[11px] bg-muted/40">
-                1080p @ 30fps
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono text-[11px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                  MediaMTX Active
+                </Badge>
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-4 pt-1">
-              {/* Video Player Canvas Box */}
-              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-inner flex items-center justify-center group">
-                {/* Simulated CCTV Camera Feed with Wildlife Way Kambas scene */}
-                <img
-                  src="https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=1200&auto=format&fit=crop&q=80"
-                  alt="Way Kambas Wildlife CCTV Feed"
-                  className={`h-full w-full object-cover transition-opacity duration-300 ${
-                    isPlaying ? 'opacity-90' : 'opacity-30'
-                  }`}
-                />
+              {/* MediaMTX Live Video Player Component */}
+              <MediaMTXLivePlayer
+                cameraName={camera.name}
+                cameraId={camera.id}
+                macAddress={camera.macAddress}
+                mediamtxEndpoint={camera.mediamtxEndpoint}
+                rtspEndpoint={camera.rtspEndpoint}
+                onOpenEditModal={() => setEditModalOpen(true)}
+              />
 
-                {/* CCTV HUD Overlay */}
-                <div className="absolute inset-0 p-4 pointer-events-none flex flex-col justify-between text-white/90 font-mono text-xs select-none">
-                  {/* Top HUD */}
+              {/* RTSP & MediaMTX Direct Link Boxes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md">
-                      <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
-                      <span className="font-bold text-red-400">REC</span>
-                      <span className="text-white/80">| {camera.name}</span>
-                    </div>
-                    <div className="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px]">
-                      {new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC
-                    </div>
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Radio className="h-3.5 w-3.5 text-primary" />
+                      RTSP Kamera Fisik (Port 554)
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopy(camera.rtspEndpoint, 'rtsp', 'RTSP Fisik URL')}
+                      className="h-7 text-xs gap-1.5"
+                    >
+                      {copiedKey === 'rtsp' ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                      <span>Salin</span>
+                    </Button>
                   </div>
+                  <code className="block rounded-lg bg-background p-2.5 font-mono text-xs text-foreground border break-all select-all">
+                    {camera.rtspEndpoint}
+                  </code>
+                </div>
 
-                  {/* Center HUD when paused */}
-                  {!isPlaying && (
-                    <div className="text-center bg-black/80 backdrop-blur-sm p-4 rounded-xl max-w-xs mx-auto pointer-events-auto">
-                      <Pause className="h-8 w-8 mx-auto mb-2 text-amber-400" />
-                      <p className="font-sans font-bold text-sm">Stream Dijeda</p>
-                      <p className="font-sans text-xs text-white/70 mt-1">
-                        Klik tombol putar untuk melanjutkan pemantauan feed live.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Bottom HUD */}
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px]">
-                      MAC: {camera.macAddress}
-                    </div>
-                    <div className="bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px] text-emerald-400">
-                      RTSP ACTIVE
-                    </div>
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Radio className="h-3.5 w-3.5 text-emerald-500" />
+                      MediaMTX Bypass / Relay URL
+                    </span>
+                    {camera.mediamtxEndpoint ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopy(camera.mediamtxEndpoint!, 'mediamtx', 'MediaMTX URL')}
+                        className="h-7 text-xs gap-1.5"
+                      >
+                        {copiedKey === 'mediamtx' ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        <span>Salin</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditModalOpen(true)}
+                        className="h-7 text-xs text-amber-500 hover:text-amber-600 gap-1"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                        <span>Set URL</span>
+                      </Button>
+                    )}
                   </div>
+                  <code className="block rounded-lg bg-background p-2.5 font-mono text-xs text-foreground border break-all select-all">
+                    {camera.mediamtxEndpoint || '- Belum ada URL MediaMTX bypass -'}
+                  </code>
                 </div>
-
-                {/* Stream Controls Overlay */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="h-8 gap-1.5 text-xs bg-black/70 hover:bg-black text-white border-white/20 backdrop-blur-sm shadow-md"
-                  >
-                    {isPlaying ? (
-                      <>
-                        <Pause className="h-3.5 w-3.5" />
-                        <span>Jeda</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3.5 w-3.5" />
-                        <span>Putar</span>
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => toast.success('Snapshot tersimpan ke galeri inspeksi!')}
-                    className="h-8 text-xs bg-black/70 hover:bg-black text-white border-white/20 backdrop-blur-sm shadow-md"
-                  >
-                    Ambil Snapshot
-                  </Button>
-                </div>
-              </div>
-
-              {/* RTSP Direct Link Box */}
-              <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <Radio className="h-3.5 w-3.5 text-primary" />
-                    RTSP Streaming URI
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopy(camera.rtspEndpoint, 'rtsp', 'RTSP URL')}
-                    className="h-7 text-xs gap-1.5"
-                  >
-                    {copiedKey === 'rtsp' ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                    <span>Salin URI</span>
-                  </Button>
-                </div>
-                <code className="block rounded-lg bg-background p-2.5 font-mono text-xs text-foreground border break-all select-all">
-                  {camera.rtspEndpoint}
-                </code>
               </div>
             </CardContent>
           </Card>
@@ -371,6 +344,22 @@ export function CameraDetailPage() {
                       ? `${Number(camera.latitude).toFixed(4)}, ${Number(camera.longitude).toFixed(4)}`
                       : '- Belum diset -'}
                   </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-3">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Radio className="h-3.5 w-3.5 text-emerald-500" />
+                    MediaMTX Relay
+                  </span>
+                  {camera.mediamtxEndpoint ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px]">
+                      Terkonfigurasi
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[11px]">
+                      Belum Diset
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-3">

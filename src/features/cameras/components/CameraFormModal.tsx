@@ -43,6 +43,13 @@ const cameraSchema = z.object({
       (val) => val.startsWith('rtsp://') || val.startsWith('http://') || val.startsWith('https://'),
       'RTSP Endpoint harus diawali dengan rtsp://, http://, atau https://'
     ),
+  mediamtxEndpoint: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val.startsWith('rtsp://') || val.startsWith('rtsps://') || val.startsWith('http://') || val.startsWith('https://'),
+      'MediaMTX RTSP Endpoint harus diawali dengan rtsp://, rtsps://, http://, atau https://'
+    ),
   latitude: z
     .string()
     .optional()
@@ -86,6 +93,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
       name: '',
       macAddress: '',
       rtspEndpoint: '',
+      mediamtxEndpoint: '',
       latitude: '',
       longitude: '',
     },
@@ -97,6 +105,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
         setValue('name', camera.name);
         setValue('macAddress', camera.macAddress);
         setValue('rtspEndpoint', camera.rtspEndpoint);
+        setValue('mediamtxEndpoint', camera.mediamtxEndpoint ?? '');
         setValue('latitude', camera.latitude != null ? String(camera.latitude) : '');
         setValue('longitude', camera.longitude != null ? String(camera.longitude) : '');
       } else {
@@ -104,6 +113,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
           name: '',
           macAddress: '',
           rtspEndpoint: '',
+          mediamtxEndpoint: '',
           latitude: '',
           longitude: '',
         });
@@ -124,6 +134,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
       name: values.name,
       macAddress: values.macAddress,
       rtspEndpoint: values.rtspEndpoint,
+      mediamtxEndpoint: values.mediamtxEndpoint && values.mediamtxEndpoint.trim() !== '' ? values.mediamtxEndpoint.trim() : null,
       latitude: parsedLat,
       longitude: parsedLong,
     };
@@ -196,7 +207,7 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <Video className="h-3.5 w-3.5 text-muted-foreground" />
-              RTSP Stream Endpoint <span className="text-destructive">*</span>
+              RTSP Stream Endpoint (Kamera Fisik) <span className="text-destructive">*</span>
             </label>
             <Input
               {...register('rtspEndpoint')}
@@ -211,6 +222,31 @@ export function CameraFormModal({ open, onOpenChange, camera }: CameraFormModalP
             )}
             <p className="text-[11px] text-muted-foreground">
               Format umum: <code className="text-primary">rtsp://[ip-address]:554/[channel]</code>
+            </p>
+          </div>
+
+          {/* MediaMTX Bypass RTSP Endpoint */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Video className="h-3.5 w-3.5 text-emerald-500" />
+                RTSP Bypass URL (MediaMTX)
+              </label>
+              <span className="text-[10px] text-muted-foreground">Opsional</span>
+            </div>
+            <Input
+              {...register('mediamtxEndpoint')}
+              placeholder="Contoh: rtsp://localhost:8554/live/stream1"
+              className="h-10 font-mono text-xs"
+              disabled={isSubmitting}
+            />
+            {errors.mediamtxEndpoint && (
+              <p className="text-xs text-destructive font-medium">
+                {errors.mediamtxEndpoint.message}
+              </p>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Stream RTSP yang di-bypass/relay melalui MediaMTX server
             </p>
           </div>
 

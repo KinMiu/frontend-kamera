@@ -46,6 +46,7 @@ export interface Camera {
   name: string;
   macAddress: string;
   rtspEndpoint: string;
+  mediamtxEndpoint?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   createdAt: string;
@@ -57,6 +58,7 @@ export interface CameraFormData {
   name: string;
   macAddress: string;
   rtspEndpoint: string;
+  mediamtxEndpoint?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 }

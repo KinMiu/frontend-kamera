@@ -17,6 +17,10 @@ export const env = {
   /** Base URL for API requests */
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
 
+  /** API Key header and secret for backend communication */
+  apiKeyHeader: import.meta.env.VITE_API_KEY_HEADER || 'x-api-key',
+  apiKey: import.meta.env.VITE_API_KEY || 'AE6F9iZuCyMpIf4wi7zxA8nSgfONFBXg',
+
   /** Whether the app should use mock data or real backend APIs */
   enableMock: import.meta.env.VITE_ENABLE_MOCK === 'true',
 

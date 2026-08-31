@@ -234,22 +234,43 @@ export function CameraManagementPage() {
         header: 'RTSP Stream Endpoint',
         cell: ({ row }) => {
           const endpoint = row.original.rtspEndpoint;
+          const mediamtx = row.original.mediamtxEndpoint;
           const isCopied = copiedId === `rtsp-${row.original.id}`;
+          const isMtxCopied = copiedId === `mtx-${row.original.id}`;
           return (
-            <div className="flex items-center gap-1.5 max-w-[280px]">
-              <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded-md border truncate flex-1">
-                <Video className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="truncate" title={endpoint}>{endpoint}</span>
+            <div className="flex flex-col gap-1 max-w-[280px]">
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded-md border truncate flex-1">
+                  <Video className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="truncate" title={endpoint}>{endpoint}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={() => handleCopy(endpoint, `rtsp-${row.original.id}`, 'RTSP URL')}
+                  title="Salin RTSP Stream URL"
+                >
+                  {isCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                onClick={() => handleCopy(endpoint, `rtsp-${row.original.id}`, 'RTSP URL')}
-                title="Salin RTSP Stream URL"
-              >
-                {isCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-              </Button>
+              {mediamtx && (
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 truncate flex-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1 bg-emerald-500/20 rounded">MTX</span>
+                    <span className="truncate" title={mediamtx}>{mediamtx}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={() => handleCopy(mediamtx, `mtx-${row.original.id}`, 'MediaMTX RTSP URL')}
+                    title="Salin MediaMTX Bypass URL"
+                  >
+                    {isMtxCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                </div>
+              )}
             </div>
           );
         },
